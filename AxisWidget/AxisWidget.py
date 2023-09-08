@@ -4,10 +4,11 @@ import sys
 
 
 class AxisWidget(QtWidgets.QWidget):
+    MoveButtonClicked = QtCore.Signal(str,float)
 
     def __init__(self,name,min=-10,max=10,stepsizeDefault=0.1, *args, **kwargs):
         super(AxisWidget, self).__init__(*args, **kwargs)
-
+        self.name = name
         
         
         layout = QtWidgets.QHBoxLayout()
@@ -15,6 +16,7 @@ class AxisWidget(QtWidgets.QWidget):
         leftBtn = QtWidgets.QPushButton(u"⇦")
         leftBtn.setStyleSheet('font: 40px;')
         leftBtn.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum)
+        leftBtn.clicked.connect(lambda: self.buttonPress("left"))
         layout.addWidget(leftBtn)
 
         axisName = QtWidgets.QLabel("{}: ".format(name))
@@ -28,6 +30,9 @@ class AxisWidget(QtWidgets.QWidget):
         rightBtn = QtWidgets.QPushButton(u"⇨")
         rightBtn.setStyleSheet('font: 40px;')
         rightBtn.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum)
+
+        rightBtn.clicked.connect(lambda: self.buttonPress("right"))
+
         layout.addWidget(rightBtn)
 
         goToPointLayout = QtWidgets.QVBoxLayout()
@@ -55,11 +60,15 @@ class AxisWidget(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
+    def buttonPress(self,direction):
+        if direction == 'right':
+            self.MoveButtonClicked.emit(self.name,1)
+        else:
+            self.MoveButtonClicked.emit(self.name,-1)
 
-        
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
     Xaxis = AxisWidget("X")
     Xaxis.show()
-    app.exec_()
+    app.exec()

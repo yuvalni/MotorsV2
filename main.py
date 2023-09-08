@@ -110,15 +110,19 @@ class MainWindow(QtWidgets.QMainWindow):
     def CreateAxisLayout(self):
         Axis_Grid_layout = QtWidgets.QGridLayout()
         Xaxis = AxisWidget("X",-20,20)
-        Xaxis.
+        Xaxis.MoveButtonClicked.connect(self.moveStep)
+
         Axis_Grid_layout.addWidget(Xaxis)
         Yaxis = AxisWidget("Y",-10,10)
+        Yaxis.MoveButtonClicked.connect(self.moveStep)
         Axis_Grid_layout.addWidget(create_Hseperator())
         Axis_Grid_layout.addWidget(Yaxis)
         Zaxis = AxisWidget("Z",-135,0)
+        Zaxis.MoveButtonClicked.connect(self.moveStep)
         Axis_Grid_layout.addWidget(create_Hseperator())
         Axis_Grid_layout.addWidget(Zaxis)
         Paxis = AxisWidget(u"θ",-30,30,1)
+        Paxis.MoveButtonClicked.connect(self.moveStep)
         Axis_Grid_layout.addWidget(create_Hseperator())
         Axis_Grid_layout.addWidget(Paxis)
         return Axis_Grid_layout
@@ -143,8 +147,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.motors = Motor()
         self.positions = dict()
-        set_positions = dict() # this is the set positions... rather then the actual positions...
-        allowd_range = {'X': (-10, 2), 'Y': (-9, 11.5), 'Z': ( -165,0), 'R': (-30, 2), 'P': (70, 200),
+        self.set_positions = dict() # this is the set positions... rather then the actual positions...
+        self.allowd_range = {'X': (-10, 2), 'Y': (-9, 11.5), 'Z': ( -165,0), 'R': (-30, 2), 'P': (70, 200),
                         'T': (-400, 400)}  # this needs to be refined.
         self.step_sizes = {**self.motors.step}
         self.safeMode = True
@@ -159,6 +163,16 @@ class MainWindow(QtWidgets.QMainWindow):
     def set_safeMode(self,mode):
         self.safeMode = mode
     
+    def moveStep(self,ax,direction):
+        print(self.step_sizes)
+        print(self.step_sizes["X"])
+        #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, way, positions[ax]))
+        if self.safeMode:
+            if (self.positions[ax] + direction * self.step_sizes[ax]) < self.allowd_range[ax][0] or (self.positions[ax] + direction * self.step_sizes[ax]) > self.allowd_range[ax][1]:
+                #logger.info('{} Out of range:{} of {} '.format(ax, positions[ax] + way * step_sizes[ax], allowd_range[ax]))
+                return False
+        if ax in self.motors.axes:
+            self.motors.go_step(ax, direction)
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
