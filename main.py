@@ -180,7 +180,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 return False
         if ax in self.motors.axes:
             self.motors.go_step(ax, direction)
-            print(self.motors.get_pos[ax])
+            print(self.motors.get_pos(ax))
 
 
     def update_all(self):
@@ -203,25 +203,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     
-class Thread(QtCore.QThread):
-    def __init__(self):
-        QtCore.QThread.__init__(self)
-
-    def run(self):
-        self.thread_func()
-        self.exec()
-
-    def thread_func(self):
-        timer = QtCore.QTimer()
-        timer.timeout.connect(window.update_all)
-        timer.start(30)
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
     #app.setStyleSheet("QPushButton { font: 40px; }")
     window = MainWindow()
     window.show() 
-    thread = Thread()
-    thread.start()
 
     app.exec()
