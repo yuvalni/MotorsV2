@@ -4,7 +4,6 @@ import sys
 from AxisWidget.AxisWidget import AxisWidget
 from settingsWidget.settingsWindow import SettingsWindow
 
-
 def create_Hseperator():
     seperator = QtWidgets.QFrame()
     seperator.setFrameShape(QtWidgets.QFrame.HLine)
@@ -25,41 +24,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings_window = SettingsWindow()
         self.settings_window.show()
 
-    def createLayout(self):
-        layout = QtWidgets.QHBoxLayout()
-
-        Axis_Grid_layout = QtWidgets.QGridLayout()
-        layout.addLayout(Axis_Grid_layout)
+    def CreateButtonPanel(self):
         Button_Grid_layout = QtWidgets.QGridLayout()
-        layout.addWidget(create_Vseperator())
-        layout.addLayout(Button_Grid_layout)
-        Xaxis = AxisWidget("X",-20,20)
-
-        #X_dock = QtWidgets.QDockWidget()
-        #X_dock.setWidget(Xaxis)
-        #X_dock.setFloating(False)
-        Axis_Grid_layout.addWidget(Xaxis)
-
-        Yaxis = AxisWidget("Y",-10,10)
-        
-        #Y_dock = QtWidgets.QDockWidget()
-        #Y_dock.setFloating(False)
-        #Y_dock.setWidget(Yaxis)
-
-        
-        Axis_Grid_layout.addWidget(create_Hseperator())
-        Axis_Grid_layout.addWidget(Yaxis)
-        
-        Zaxis = AxisWidget("Z",-135,0)
-        Axis_Grid_layout.addWidget(create_Hseperator())
-        Axis_Grid_layout.addWidget(Zaxis)
-
-        Paxis = AxisWidget(u"θ",-30,30,1)
-        Axis_Grid_layout.addWidget(create_Hseperator())
-        Axis_Grid_layout.addWidget(Paxis)
-        
-        
-
         Settings_Btn = QtWidgets.QPushButton(U"⚙️")
         Settings_Btn.setStyleSheet("QPushButton { font: 40px; }")
         Settings_Btn.setToolTip("Settings")
@@ -136,12 +102,33 @@ class MainWindow(QtWidgets.QMainWindow):
         Stop_Btn.setStyleSheet("QPushButton { font: 40px;}")
         Stop_Btn.setToolTip("Stop")
         Button_Grid_layout.addWidget(Stop_Btn)
-        #window = QtWidgets.QMainWindow()
-        #window = QtWidgets.QWidget()
-        #window.setCentralWidget(layout)
-        #window.addDockWidget(QtCore.Qt.TopDockWidgetArea,X_dock)
-        #window.addDockWidget(QtCore.Qt.RightDockWidgetArea,Y_dock)
+        return Button_Grid_layout
+    def CreateAxisLayout(self):
+        Axis_Grid_layout = QtWidgets.QGridLayout()
+        Xaxis = AxisWidget("X",-20,20)
+        Axis_Grid_layout.addWidget(Xaxis)
+        Yaxis = AxisWidget("Y",-10,10)
+        Axis_Grid_layout.addWidget(create_Hseperator())
+        Axis_Grid_layout.addWidget(Yaxis)
+        Zaxis = AxisWidget("Z",-135,0)
+        Axis_Grid_layout.addWidget(create_Hseperator())
+        Axis_Grid_layout.addWidget(Zaxis)
+        Paxis = AxisWidget(u"θ",-30,30,1)
+        Axis_Grid_layout.addWidget(create_Hseperator())
+        Axis_Grid_layout.addWidget(Paxis)
+        return Axis_Grid_layout
+    
+    def createLayout(self):
+        layout = QtWidgets.QHBoxLayout()
+        Axis_Grid_layout = self.CreateAxisLayout()
+        
+        layout.addLayout(Axis_Grid_layout)
+        layout.addWidget(create_Vseperator())
+        buttonPanel = self.CreateButtonPanel()
+        layout.addLayout(buttonPanel)
         return layout
+    
+
     def __init__(self,*args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         window = QtWidgets.QWidget()
