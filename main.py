@@ -10,6 +10,7 @@ def create_Hseperator():
     seperator.setFrameShape(QtWidgets.QFrame.HLine)
     seperator.setLineWidth(3)
     return seperator
+
 def create_Vseperator():
     seperator = QtWidgets.QFrame()
     seperator.setFrameShape(QtWidgets.QFrame.VLine)
@@ -19,13 +20,12 @@ def create_Vseperator():
 
 
 
-class MainWindow(QtWidgets.QWidget):
+class MainWindow(QtWidgets.QMainWindow):
     def show_settings_window(self):
         self.settings_window = SettingsWindow()
         self.settings_window.show()
 
-    def __init__(self,*args, **kwargs):
-        super(MainWindow, self).__init__(*args, **kwargs)
+    def createLayout(self):
         layout = QtWidgets.QHBoxLayout()
 
         Axis_Grid_layout = QtWidgets.QGridLayout()
@@ -141,9 +141,15 @@ class MainWindow(QtWidgets.QWidget):
         #window.setCentralWidget(layout)
         #window.addDockWidget(QtCore.Qt.TopDockWidgetArea,X_dock)
         #window.addDockWidget(QtCore.Qt.RightDockWidgetArea,Y_dock)
-        #window.setCentralWidget(None)
-        self.setLayout(layout)
-        #window.setDockNestingEnabled(True)
+        return layout
+    def __init__(self,*args, **kwargs):
+        super(MainWindow, self).__init__(*args, **kwargs)
+        window = QtWidgets.QWidget()
+        layout = self.createLayout()
+        window.setLayout(layout)
+        self.setCentralWidget(window)
+        
+        
         
     
 
