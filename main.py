@@ -2,7 +2,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 import sys
 from AxisWidget.AxisWidget import AxisWidget
-from settingsWindow import SettingsWindow
+from settingsWidget.settingsWindow import SettingsWindow
 
 
 def create_Hseperator():

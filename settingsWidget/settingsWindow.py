@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 import sys
-from settingsWidget.settingsWidget import SettingsWidget
+from settingsWidget import SettingsWidget
 
 
 
