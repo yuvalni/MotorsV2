@@ -18,4 +18,4 @@ if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
     axis = axisWidget()
     axis.show()
-    app.exec_()
+    app.exec()

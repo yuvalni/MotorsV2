@@ -3,6 +3,9 @@ from PySide6.QtCore import Qt
 import sys
 from AxisWidget.AxisWidget import AxisWidget
 from settingsWidget.settingsWindow import SettingsWindow
+from MotorsClass.mdrive_MOCK import Motor
+
+
 
 def create_Hseperator():
     seperator = QtWidgets.QFrame()
@@ -48,6 +51,7 @@ class MainWindow(QtWidgets.QMainWindow):
         SafeMode_Btn.setToolTip("Safe Mode")
         SafeMode_Btn.setCheckable(True)
         SafeMode_Btn.setChecked(True)
+        SafeMode_Btn.toggled.connect(self.set_safeMode)
         #SafeMode_Btn.toggled.connect()  This will pass True/False if btn is checked or not.
         Button_Grid_layout.addWidget(SafeMode_Btn)
 
@@ -106,6 +110,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def CreateAxisLayout(self):
         Axis_Grid_layout = QtWidgets.QGridLayout()
         Xaxis = AxisWidget("X",-20,20)
+        Xaxis.
         Axis_Grid_layout.addWidget(Xaxis)
         Yaxis = AxisWidget("Y",-10,10)
         Axis_Grid_layout.addWidget(create_Hseperator())
@@ -135,9 +140,24 @@ class MainWindow(QtWidgets.QMainWindow):
         layout = self.createLayout()
         window.setLayout(layout)
         self.setCentralWidget(window)
-        
-        
-        
+
+        self.motors = Motor()
+        self.positions = dict()
+        set_positions = dict() # this is the set positions... rather then the actual positions...
+        allowd_range = {'X': (-10, 2), 'Y': (-9, 11.5), 'Z': ( -165,0), 'R': (-30, 2), 'P': (70, 200),
+                        'T': (-400, 400)}  # this needs to be refined.
+        self.step_sizes = {**self.motors.step}
+        self.safeMode = True
+
+    @QtCore.Slot(float)
+    def set_step(self, ax, step):
+        self.step_sizes[ax] = step
+        if ax in self.motors.axes:
+            self.motors.step[ax] = step
+    
+    @QtCore.Slot(bool)
+    def set_safeMode(self,mode):
+        self.safeMode = mode
     
 
 if __name__=="__main__":
