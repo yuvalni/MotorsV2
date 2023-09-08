@@ -4,7 +4,7 @@ import sys
 from AxisWidget.AxisWidget import AxisWidget
 from settingsWindow import SettingsWindow
 
-asdjlkad
+
 def create_Hseperator():
     seperator = QtWidgets.QFrame()
     seperator.setFrameShape(QtWidgets.QFrame.HLine)

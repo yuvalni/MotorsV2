@@ -32,7 +32,14 @@ class SettingsWidget(QtWidgets.QWidget):
         vbox.addLayout(form)
         vbox.addWidget(QtWidgets.QPushButton("Set"))
 
+        UpdateCurrentPos_form = QtWidgets.QFormLayout()
+        update_pos = QtWidgets.QLineEdit()
+        update_pos.setValidator(double_validator)
+        UpdateCurrentPos_form.addRow("Set Current position to: ",update_pos)
+        update_pos_Btn = QtWidgets.QPushButton("change position")
 
+        vbox.addLayout(UpdateCurrentPos_form)
+        vbox.addWidget(update_pos_Btn)
 
         self.setLayout(layout)
 
