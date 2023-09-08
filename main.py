@@ -108,23 +108,29 @@ class MainWindow(QtWidgets.QMainWindow):
         Button_Grid_layout.addWidget(Stop_Btn)
         return Button_Grid_layout
     def CreateAxisLayout(self):
+        self.axis = {}
         Axis_Grid_layout = QtWidgets.QGridLayout()
         Xaxis = AxisWidget("X",-20,20)
         Xaxis.MoveButtonClicked.connect(self.moveStep)
-
         Axis_Grid_layout.addWidget(Xaxis)
+        self.axis["X"] = Xaxis
         Yaxis = AxisWidget("Y",-10,10)
         Yaxis.MoveButtonClicked.connect(self.moveStep)
         Axis_Grid_layout.addWidget(create_Hseperator())
         Axis_Grid_layout.addWidget(Yaxis)
+        self.axis["Y"] = Yaxis
         Zaxis = AxisWidget("Z",-135,0)
         Zaxis.MoveButtonClicked.connect(self.moveStep)
         Axis_Grid_layout.addWidget(create_Hseperator())
         Axis_Grid_layout.addWidget(Zaxis)
-        Paxis = AxisWidget(u"θ",-30,30,1)
+        self.axis["Z"] = Zaxis
+        #Paxis = AxisWidget(u"θ",-30,30,1)
+        Paxis = AxisWidget("R",-30,30,1)
         Paxis.MoveButtonClicked.connect(self.moveStep)
         Axis_Grid_layout.addWidget(create_Hseperator())
         Axis_Grid_layout.addWidget(Paxis)
+        #self.axis["θ"] = Paxis
+        self.axis["R"] = Paxis
         return Axis_Grid_layout
     
     def createLayout(self):
@@ -145,8 +151,11 @@ class MainWindow(QtWidgets.QMainWindow):
         window.setLayout(layout)
         self.setCentralWidget(window)
 
+        self.moving = False
+
         self.motors = Motor()
         self.positions = dict()
+        self.positions = {"X":0,"Y":0,"Z":0,"R":0}
         self.set_positions = dict() # this is the set positions... rather then the actual positions...
         self.allowd_range = {'X': (-10, 2), 'Y': (-9, 11.5), 'Z': ( -165,0), 'R': (-30, 2), 'P': (70, 200),
                         'T': (-400, 400)}  # this needs to be refined.
@@ -164,8 +173,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.safeMode = mode
     
     def moveStep(self,ax,direction):
-        print(self.step_sizes)
-        print(self.step_sizes["X"])
         #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, way, positions[ax]))
         if self.safeMode:
             if (self.positions[ax] + direction * self.step_sizes[ax]) < self.allowd_range[ax][0] or (self.positions[ax] + direction * self.step_sizes[ax]) > self.allowd_range[ax][1]:
@@ -173,11 +180,48 @@ class MainWindow(QtWidgets.QMainWindow):
                 return False
         if ax in self.motors.axes:
             self.motors.go_step(ax, direction)
+            print(self.motors.get_pos[ax])
+
+
+    def update_all(self):
+        #serial_up.acquire(blocking=False) #Do not close serial!
+        #while update_loop.is_set():
+        while True:
+            for ax in self.motors.axes:
+                pos = self.motors.get_pos(ax)
+                if pos != 'Not Connected':
+                    self.positions[ax] = float(pos)
+                    self.axis[ax].setPosition(float(pos))
+            #api.pos = positions #this needs to speak the same language with API!
+            #if moving:
+            #    api.status = Status.MOVING
+            #    eel.set_gui_moving(True)
+            #else:
+            #    api.status = Status.DONE
+            #    eel.set_gui_moving(False)
+            #eel.sleep(0.1)
+
+
+    
+class Thread(QtCore.QThread):
+    def __init__(self):
+        QtCore.QThread.__init__(self)
+
+    def run(self):
+        self.thread_func()
+        self.exec()
+
+    def thread_func(self):
+        timer = QtCore.QTimer()
+        timer.timeout.connect(window.update_all)
+        timer.start(30)
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
     #app.setStyleSheet("QPushButton { font: 40px; }")
     window = MainWindow()
     window.show() 
-    
+    thread = Thread()
+    thread.start()
+
     app.exec()

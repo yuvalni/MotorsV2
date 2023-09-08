@@ -23,9 +23,9 @@ class AxisWidget(QtWidgets.QWidget):
         axisName.setStyleSheet('font: 40px;')
         layout.addWidget(axisName)
         
-        pos = QtWidgets.QLabel("0.00")
-        pos.setStyleSheet('font: 40px;')
-        layout.addWidget(pos)
+        self.pos = QtWidgets.QLabel("0.00")
+        self.pos.setStyleSheet('font: 40px;')
+        layout.addWidget(self.pos)
 
         rightBtn = QtWidgets.QPushButton(u"⇨")
         rightBtn.setStyleSheet('font: 40px;')
@@ -65,6 +65,9 @@ class AxisWidget(QtWidgets.QWidget):
             self.MoveButtonClicked.emit(self.name,1)
         else:
             self.MoveButtonClicked.emit(self.name,-1)
+
+    def setPosition(self,pos):
+        self.pos.setNum(pos)
 
 
 if __name__=="__main__":
