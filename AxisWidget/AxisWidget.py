@@ -5,6 +5,8 @@ import sys
 
 class AxisWidget(QtWidgets.QWidget):
     MoveButtonClicked = QtCore.Signal(str,float)
+    GoToPosClicked = QtCore.Signal(str,float)
+    SetStep = QtCore.Signal(str,float)
 
     def __init__(self,name,min=-10,max=10,stepsizeDefault=0.1, *args, **kwargs):
         super(AxisWidget, self).__init__(*args, **kwargs)
@@ -37,17 +39,19 @@ class AxisWidget(QtWidgets.QWidget):
 
         goToPointLayout = QtWidgets.QVBoxLayout()
         goToPointForm = QtWidgets.QFormLayout()
-        GoToPos = QtWidgets.QDoubleSpinBox()
-        GoToPos.setMaximum(max)
-        GoToPos.setMinimum(min)
-        GoToPos.setStyleSheet('font: 20px;')
-        goToPointForm.addRow("go to:",GoToPos)
+        self.GoToPos = QtWidgets.QDoubleSpinBox()
+        self.GoToPos.setMaximum(max)
+        self.GoToPos.setMinimum(min)
+        self.GoToPos.setStyleSheet('font: 20px;')
+        goToPointForm.addRow("go to:",self.GoToPos)
         #goToPointForm.setStyleSheet('font: 40px;')
     
         GoToPosBtn = QtWidgets.QPushButton("Go")
+        GoToPosBtn.clicked.connect(self.GoToPosClicked_func)
         StepSizeBtn = QtWidgets.QPushButton("Set step")
-        SetStepSize = QtWidgets.QDoubleSpinBox(value=stepsizeDefault)
-        goToPointForm.addRow("set Step size:",SetStepSize)
+        StepSizeBtn.clicked.connect(self.SetStepClicked)
+        self.SetStepSize = QtWidgets.QDoubleSpinBox(value=stepsizeDefault)
+        goToPointForm.addRow("set Step size:",self.SetStepSize)
 
         goToPointForm.addRow(GoToPosBtn,StepSizeBtn)
         goToPointLayout.addLayout(goToPointForm)
@@ -65,6 +69,12 @@ class AxisWidget(QtWidgets.QWidget):
             self.MoveButtonClicked.emit(self.name,1)
         else:
             self.MoveButtonClicked.emit(self.name,-1)
+
+    def GoToPosClicked_func(self):
+        self.GoToPosClicked.emit(self.name,self.GoToPos.value())
+
+    def SetStepClicked(self):
+        self.SetStep.emit(self.name,self.SetStepSize.value())
 
     def setPosition(self,pos):
         self.pos.setNum(pos)

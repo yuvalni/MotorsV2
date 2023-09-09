@@ -62,8 +62,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         
         LED_form = QtWidgets.QFormLayout()
-        manipulatorStopdMoving_LED = QtWidgets.QCheckBox()
-        manipulatorStopdMoving_LED.setStyleSheet(u"QCheckBox::indicator {\n"
+        self.manipulatorStopdMoving_LED = QtWidgets.QCheckBox()
+        self.manipulatorStopdMoving_LED.setChecked(True)
+        self.manipulatorStopdMoving_LED.setEnabled(False)
+
+
+        self.manipulatorStopdMoving_LED.setStyleSheet(u"QCheckBox::indicator {\n"
                                                                         "    width:                  20px;\n"
                                                                         "    height:                 20px;\n"
                                                                         "    border-radius:          5px;\n"
@@ -78,7 +82,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                                                         "    background-color:       rgb(255, 0, 0);\n"
                                                                         "    border:                 2px solid black;\n"
                                                                         "}")
-        LED_form.addRow("Moving ",manipulatorStopdMoving_LED)
+        LED_form.addRow("Stoped Moving ",self.manipulatorStopdMoving_LED)
         
 
         
@@ -114,21 +118,29 @@ class MainWindow(QtWidgets.QMainWindow):
         Axis_Grid_layout = QtWidgets.QGridLayout()
         Xaxis = AxisWidget("X",-20,20)
         Xaxis.MoveButtonClicked.connect(self.moveStep)
+        Xaxis.GoToPosClicked.connect(self.go_to_pos)
+        Xaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(Xaxis)
         self.axis["X"] = Xaxis
         Yaxis = AxisWidget("Y",-10,10)
         Yaxis.MoveButtonClicked.connect(self.moveStep)
+        Yaxis.GoToPosClicked.connect(self.go_to_pos)
+        Yaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(create_Hseperator())
         Axis_Grid_layout.addWidget(Yaxis)
         self.axis["Y"] = Yaxis
         Zaxis = AxisWidget("Z",-135,0)
         Zaxis.MoveButtonClicked.connect(self.moveStep)
+        Zaxis.GoToPosClicked.connect(self.go_to_pos)
+        Zaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(create_Hseperator())
         Axis_Grid_layout.addWidget(Zaxis)
         self.axis["Z"] = Zaxis
         #Paxis = AxisWidget(u"θ",-30,30,1)
         Paxis = AxisWidget("R",-30,30,1)
         Paxis.MoveButtonClicked.connect(self.moveStep)
+        Paxis.GoToPosClicked.connect(self.go_to_pos)
+        Paxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(create_Hseperator())
         Axis_Grid_layout.addWidget(Paxis)
         #self.axis["θ"] = Paxis
@@ -152,6 +164,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #locks:
         self.update_loop = threading.Event()
         self.serial_up = threading.Lock()
+        self.stoped = threading.Event()
 
         window = QtWidgets.QWidget()
         layout = self.createLayout()
@@ -159,6 +172,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(window)
 
         self.moving = False
+        self.PolarLock = False
 
         self.motors = Motor()
         self.positions = dict()
@@ -179,6 +193,26 @@ class MainWindow(QtWidgets.QMainWindow):
     def set_safeMode(self,mode):
         self.safeMode = mode
     
+    @QtCore.Slot(float)
+    def go_to_pos(self,ax,pos):
+        #logger.info('{} sent to: {}. position: {}.'.format(ax, point, positions[ax]))
+        if self.safeMode:
+            if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
+                #logger.info('{} Out of range: {} of {} '.format(ax, point, allowd_range[ax]))
+                return False
+
+        self.moving = True
+        self.set_positions[ax] = float(pos)
+        if ax in self.motors.axes:
+            self.motors.go_to_pos(ax, float(pos))
+
+        self.stoped.clear() #initiated a new movement
+        #eel.set_gui_moving(True)
+        self.manipulatorStopdMoving_LED.setChecked(False)
+        self.threadpool.start(self.check_movement)
+        
+
+
     def moveStep(self,ax,direction):
         #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, way, positions[ax]))
         if self.safeMode:
@@ -187,8 +221,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 return False
         if ax in self.motors.axes:
             self.motors.go_step(ax, direction)
-            print(self.motors.get_pos(ax))
-
 
     def updateLoop(self):
         self.serial_up.acquire(blocking=False) #Do not close serial!
@@ -205,16 +237,38 @@ class MainWindow(QtWidgets.QMainWindow):
             #else:
             #    api.status = Status.DONE
             #    eel.set_gui_moving(False)
-            sleep(0.1)
-        self.serial_up.release()
+            sleep(0.05)
+        self.serial_up.release() #Now you can close the serial connection
 
     def startUpdateLoop(self):
         self.update_loop.set()
         self.threadpool.start(self.updateLoop)
         
-        
+    def check_movement(self):
+        while True:
+            flag = True
+            for ax in self.set_positions.keys():
+                if round(self.set_positions[ax],3) != round(self.positions[ax],3):
+                    flag = False
+            if flag:
+                self.moving = False
+                self.manipulatorStopdMoving_LED.setChecked(True)
+                return True
+            if self.stoped.is_set():
+                self.stoped.clear()
+                #if stoped is pressed. movement is done!
+                #so set the set_pos to be the current one,
+                #end we have finished movement!
+                for ax in self.set_positions.keys():
+                    self.set_positions[ax] = self.positions[ax]
+                self.moving = False
+                self.manipulatorStopdMoving_LED.setChecked(True)
+                return True
+
+            sleep(0.05)
+
     def closeWindowCallback(self):
-        print("closing")
+        print("closing motor connection.")
         self.update_loop.clear() # now update loop is shutting down
         sleep(3)
         self.serial_up.acquire(blocking=True,timeout=15)
