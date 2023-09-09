@@ -40,6 +40,7 @@ class Motor(object):
             #self.set_limits()
 
     def close(self):
+        return True
         if self.ser.is_open:
             self.write("XS")
             sleep(30/1000)

@@ -4,9 +4,11 @@ import sys
 from AxisWidget.AxisWidget import AxisWidget
 from settingsWidget.settingsWindow import SettingsWindow
 from MotorsClass.mdrive_MOCK import Motor
+from time import sleep
+import threading
 
 
-
+        
 def create_Hseperator():
     seperator = QtWidgets.QFrame()
     seperator.setFrameShape(QtWidgets.QFrame.HLine)
@@ -146,6 +148,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self,*args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
+        self.threadpool = QtCore.QThreadPool()
+        #locks:
+        self.update_loop = threading.Event()
+        self.serial_up = threading.Lock()
+
         window = QtWidgets.QWidget()
         layout = self.createLayout()
         window.setLayout(layout)
@@ -183,10 +190,9 @@ class MainWindow(QtWidgets.QMainWindow):
             print(self.motors.get_pos(ax))
 
 
-    def update_all(self):
-        #serial_up.acquire(blocking=False) #Do not close serial!
-        #while update_loop.is_set():
-        while True:
+    def updateLoop(self):
+        self.serial_up.acquire(blocking=False) #Do not close serial!
+        while self.update_loop.is_set():
             for ax in self.motors.axes:
                 pos = self.motors.get_pos(ax)
                 if pos != 'Not Connected':
@@ -199,15 +205,26 @@ class MainWindow(QtWidgets.QMainWindow):
             #else:
             #    api.status = Status.DONE
             #    eel.set_gui_moving(False)
-            #eel.sleep(0.1)
+            sleep(0.1)
+        self.serial_up.release()
 
-
-    
+    def startUpdateLoop(self):
+        self.update_loop.set()
+        self.threadpool.start(self.updateLoop)
+        
+        
+    def closeWindowCallback(self):
+        print("closing")
+        self.update_loop.clear() # now update loop is shutting down
+        sleep(3)
+        self.serial_up.acquire(blocking=True,timeout=15)
+        self.motors.close()
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
-    #app.setStyleSheet("QPushButton { font: 40px; }")
+    
     window = MainWindow()
+    app.aboutToQuit.connect(window.closeWindowCallback)
     window.show() 
-
+    window.startUpdateLoop()
     app.exec()
