@@ -27,8 +27,8 @@ def create_Vseperator():
 class MainWindow(QtWidgets.QMainWindow):
     def show_settings_window(self):
         self.settings_window = SettingsWindow(self.allowd_range,self.positions)
-        self.settings_window.limitsChanged.connect(lambda name,h,l: print(name,h,l))
-        self.settings_window.PositionIsSet.connect(lambda name,pos: print(name,pos) )
+        self.settings_window.limitsChanged.connect(lambda name,h,l: self.changeLimits(name,h,l))
+        self.settings_window.PositionIsSet.connect(lambda name,pos: self.redefineMotorPosition(name,pos) )
         self.settings_window.show()
 
     def CreateButtonPanel(self):
@@ -268,7 +268,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 return True
 
             sleep(0.05)
+    def redefineMotorPosition(self,ax,pos):
+        realPos = self.motors.set_pos(ax, float(pos))
+        #logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(real)))
 
+    def changeLimits(self,ax,high,low):
+        self.allowd_range[ax] = (low,high)
+        
     def closeWindowCallback(self):
         print("closing motor connection.")
         self.update_loop.clear() # now update loop is shutting down
