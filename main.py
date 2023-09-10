@@ -269,6 +269,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             sleep(0.05)
     def redefineMotorPosition(self,ax,pos):
+        print(ax,pos)
         realPos = self.motors.set_pos(ax, float(pos))
         #logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(real)))
 

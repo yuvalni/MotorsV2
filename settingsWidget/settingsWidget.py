@@ -44,12 +44,21 @@ class SettingsWidget(QtWidgets.QWidget):
         self.update_pos.setText(str(pos))
         UpdateCurrentPos_form.addRow("Set Current position to: ",self.update_pos)
         update_pos_Btn = QtWidgets.QPushButton("change position")
-        update_pos_Btn.clicked.connect(self.setPosition)
+        #update_pos_Btn.clicked.connect(self.setPosition)
+        update_pos_Btn.clicked.connect(self.showDialog)
         vbox.addLayout(UpdateCurrentPos_form)
         vbox.addWidget(update_pos_Btn)
-
         self.setLayout(layout)
 
+    def showDialog(self):
+        msgBox = QtWidgets.QMessageBox()
+        msgBox.setIcon(QtWidgets.QMessageBox.Warning)
+        msgBox.setWindowTitle("redefine motor position")
+        msgBox.setText("Are you sure you want to redefine motor position?")
+        msgBox.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        if msgBox.exec():
+            self.setPosition()
+    
     def limitSet(self):
         self.limitsChanged.emit(float(self.LowLimit.text()),float(self.HighLimit.text()))
 
