@@ -120,7 +120,7 @@ class Motor(object):
         return pos
 
     def go_to_pos(self, axis, pos):
-        sleep(0.3)
+        sleep(0.03)
         self.pos[axis] = pos
         return True
         self.ser.flush()
