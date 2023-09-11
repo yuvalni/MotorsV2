@@ -1,0 +1,125 @@
+from enum import Enum
+import socket
+import re
+from select import select
+from time import sleep
+
+class Status(Enum):
+    MOVING = 0
+    DONE = 1
+    ABORTED = 2
+    ERROR = 3
+
+
+class SES_API:
+    def __init__(self,moveFunction,StopFunction):
+        self.HOST = "127.0.0.1" 
+        self.PORT = 5011  # Port to listen on
+        self.status =  Status.DONE
+        self.conn = None
+        self.pos = {"R":0.0,"T":0.0,"P":0.0,"X":0.0,"Y":0.0,"Z":0.0}
+        self.move_reg = re.compile('(X|Y|Z|R|T|P)([+-]?([0-9]*[.])?[0-9]+)') #capturing X or Y or Z and float number
+        self.pos_reg = re.compile('(X|Y|Z|R|T|P)(\?)') #capturing X or Y or Z and float number
+        self.listening = False
+        self.connected = False
+        self.moveFunction = moveFunction
+        self.stopFunction = StopFunction
+        #P - polar T- tilt  F - phi
+
+    def move(self,data):
+        self.status = Status.MOVING
+        m = self.move_reg.findall(data)
+        if m:
+            axis, pos  = m[0][0] , m[0][1]
+            self.moveFunction(axis,pos)
+            print(axis,pos)
+        else:
+            print("no axis found.")
+
+    def send_pos(self,data):
+         #axis = self.pos_reg.search(data.decode("UTF-8")).group(0)
+         axis = data.replace("?","")
+         #print('sending pos')
+         #print("{}\n".format(self.pos[axis]))
+         self.conn.send("{}\n".format(self.pos[axis]).encode())
+
+    def stop(self):
+        print('stoping')
+        self.stopFunction()
+
+    def send_status(self):
+        print('send status',self.status)
+        self.conn.send("{}\n".format(self.status.value).encode())
+
+    def handle_req(self,data):
+        #print(data)
+        if "STATUS" in data:
+            self.send_status()
+        else:
+            self.send_pos(data)
+
+    def handle_connection(self):#this is main loop.
+        #Insted of eel set we need to omit an "conectionError" signal. (red)
+        #eel.set_socket_value(0)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setblocking(True)
+            s.settimeout(0.01)
+            s.bind((self.HOST, self.PORT))
+            s.listen()
+
+            while True:
+                print("listening")
+                self.listening = True
+                #eel.set_socket_value(1)
+                #Insted of eel set we need to omit a "NotConnected" signal.(yellow)
+                read,write,_ = select([s],[s],[],0.01)
+                while(not read):
+                    #waiting for connection without blocking
+                    #This works good
+                    read, write, _ = select([s], [s], [],0)
+                    sleep(0.1)
+
+                self.conn, addr = s.accept()
+                self.conn.settimeout(0.1)
+                with self.conn:
+                    #eel.set_socket_value(2)
+                    #Insted of eel set we need to omit a "Connected" signal. (green)
+                    self.listening = False
+                    self.connected = True
+                    print("Connected by {}".format(addr))
+
+                    while self.connected:
+                        #we are stuck here!
+                        try:
+                            data = self.conn.recv(512)
+                        except socket.timeout as e:
+                            #print(e)
+                            #print("non blocking")
+                            sleep(0.1)
+                            continue
+
+                        if data == b'':
+                            sleep(0.01)
+                            continue
+
+                        for data in data.decode("UTF-8").split('\n'):
+                            if("?" in data):
+                                self.handle_req(data) #Handle data request
+                            elif "MOV" in data: #MOVX5.0 for example
+                                self.move(data) #handle move request
+                            elif "STOP" in data:
+                                self.stop()
+                            else:
+                                if data!=r"\n":
+                                    #print(data) # anything else please?
+                                    pass
+
+                            if data=="exit":
+                                # closing connection, but awaiting another one...
+                                self.connected = False
+                                break
+
+                        sleep(0.01)
+
+
+                sleep(0.1)

@@ -8,6 +8,33 @@ from time import sleep
 import threading
 
 
+import logging
+from logging.handlers import TimedRotatingFileHandler
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+ch.setFormatter(formatter)
+root.addHandler(ch)
+
+logger = logging.getLogger('main')
+logger.setLevel(logging.DEBUG)
+InfoLog = logging.handlers.TimedRotatingFileHandler('./logs/info.log', when='D', interval=1,
+                                                    backupCount=7)  # log errors in a weekly file, save monthly backup
+InfoLog.setLevel(logging.INFO)
+InfoLog.setFormatter(formatter)
+logger.addHandler(InfoLog)
+
+Poslogger = logging.getLogger('Pos')
+Poslogger.setLevel(logging.DEBUG)
+PosLog = logging.handlers.TimedRotatingFileHandler('./logs/postion.log', when='D', interval=1,
+                                                   backupCount=7)  # log errors in a weekly file, save monthly backup
+PosLog.setLevel(logging.DEBUG)
+PosLog.setFormatter(formatter)
+Poslogger.addHandler(PosLog)
+
         
 def create_Hseperator():
     seperator = QtWidgets.QFrame()
@@ -197,10 +224,10 @@ class MainWindow(QtWidgets.QMainWindow):
     
     @QtCore.Slot(float)
     def go_to_pos(self,ax,pos):
-        #logger.info('{} sent to: {}. position: {}.'.format(ax, point, positions[ax]))
+        logger.info('{} sent to: {}. position: {}.'.format(ax, point, positions[ax]))
         if self.safeMode:
             if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
-                #logger.info('{} Out of range: {} of {} '.format(ax, point, allowd_range[ax]))
+                logger.info('{} Out of range: {} of {} '.format(ax, point, allowd_range[ax]))
                 return False
 
         self.moving = True
@@ -216,10 +243,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def moveStep(self,ax,direction):
-        #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, way, positions[ax]))
+        logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, way, positions[ax]))
         if self.safeMode:
             if (self.positions[ax] + direction * self.step_sizes[ax]) < self.allowd_range[ax][0] or (self.positions[ax] + direction * self.step_sizes[ax]) > self.allowd_range[ax][1]:
-                #logger.info('{} Out of range:{} of {} '.format(ax, positions[ax] + way * step_sizes[ax], allowd_range[ax]))
+                logger.info('{} Out of range:{} of {} '.format(ax, positions[ax] + way * step_sizes[ax], allowd_range[ax]))
                 return False
         if ax in self.motors.axes:
             self.motors.go_step(ax, direction)
@@ -271,13 +298,13 @@ class MainWindow(QtWidgets.QMainWindow):
     def redefineMotorPosition(self,ax,pos):
         print(ax,pos)
         realPos = self.motors.set_pos(ax, float(pos))
-        #logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(real)))
+        logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(realPos)))
 
     def changeLimits(self,ax,high,low):
         self.allowd_range[ax] = (low,high)
         
     def closeWindowCallback(self):
-        print("closing motor connection.")
+        logger.info("closing motor connection.")
         self.update_loop.clear() # now update loop is shutting down
         sleep(3)
         self.serial_up.acquire(blocking=True,timeout=15)
