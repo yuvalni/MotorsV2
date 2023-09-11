@@ -3,11 +3,11 @@ import socket
 import re
 from select import select
 from time import sleep
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal,QObject,Slot
 
 
 
-class SES_API:
+class SES_API(QObject):
     class ManipulatorStatus(Enum):
         MOVING = 0
         DONE = 1
@@ -24,6 +24,8 @@ class SES_API:
     moveTo = Signal(str,float)
     
     def __init__(self):
+        super(SES_API,self).__init__()
+        self.run = True
         self.HOST = "127.0.0.1" 
         self.PORT = 5011  # Port to listen on
         self.status =  self.ManipulatorStatus.DONE
@@ -68,6 +70,11 @@ class SES_API:
         else:
             self.send_pos(data)
 
+    @Slot()
+    def closeLoop(self):
+        print("closing SES loop.")
+        self.run = False
+
     def handle_connection(self):#this is main loop.
         self.ConnectionStatusChanged.emit(self.ConnectionStatus.Error)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -76,12 +83,12 @@ class SES_API:
             s.bind((self.HOST, self.PORT))
             s.listen()
 
-            while True:
+            while self.run:
                 print("listening")
                 self.listening = True
                 self.ConnectionStatusChanged.emit(self.ConnectionStatus.Listening)
                 read,write,_ = select([s],[s],[],0.01)
-                while(not read):
+                while((not read) and self.run):
                     #waiting for connection without blocking
                     #This works good
                     read, write, _ = select([s], [s], [],0)
@@ -95,7 +102,7 @@ class SES_API:
                     self.connected = True
                     print("Connected by {}".format(addr))
 
-                    while self.connected:
+                    while self.connected and self.run:
                         #we are stuck here!
                         try:
                             data = self.conn.recv(512)

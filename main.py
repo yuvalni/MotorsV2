@@ -310,6 +310,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 return True
 
             sleep(0.05)
+
     def redefineMotorPosition(self,ax,pos):
         print(ax,pos)
         realPos = self.motors.set_pos(ax, float(pos))
@@ -318,9 +319,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def changeLimits(self,ax,high,low):
         self.allowd_range[ax] = (low,high)
         
-    def closeWindowCallback(self):
+    def closeWindowCallback(self,SESapi):
         logger.info("closing motor connection.")
         self.update_loop.clear() # now update loop is shutting down
+        SESapi.closeLoop()
         sleep(3)
         self.serial_up.acquire(blocking=True,timeout=15)
         self.motors.close()
@@ -377,17 +379,22 @@ class MainWindow(QtWidgets.QMainWindow):
             self.set_point("Y", _y)
             self.set_point("R",_P)
 
+        
+
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
-    app.aboutToQuit.connect(window.closeWindowCallback)
+    
     window.show() 
     window.startUpdateLoop()
     SESapi = SES_API()
-    SESapi.ConnectionStatusChanged.connect(window.changeConnectionLED)
+    SESapi.ConnectionStatusChanged.connect(lambda state: window.ChangeConnectionLED(state))
     SESapi.Stop.connect(window.stop)
     SESapi.moveTo.connect(lambda ax,pos: window.SESmove(ax,pos))
     window.threadpool.start(SESapi.handle_connection)
+
+    app.aboutToQuit.connect(lambda: window.closeWindowCallback(SESapi))
+
 
 
     app.exec()
