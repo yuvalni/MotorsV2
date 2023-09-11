@@ -23,7 +23,7 @@ class SES_API:
     Stop = Signal()
     moveTo = Signal(str,float)
     
-    def __init__(self,moveFunction,StopFunction):
+    def __init__(self):
         self.HOST = "127.0.0.1" 
         self.PORT = 5011  # Port to listen on
         self.status =  self.ManipulatorStatus.DONE
@@ -33,8 +33,7 @@ class SES_API:
         self.pos_reg = re.compile('(X|Y|Z|R|T|P)(\?)') #capturing X or Y or Z and float number
         self.listening = False
         self.connected = False
-        self.moveFunction = moveFunction
-        self.stopFunction = StopFunction
+
         #P - polar T- tilt  F - phi
 
     def move(self,data):
@@ -42,7 +41,7 @@ class SES_API:
         m = self.move_reg.findall(data)
         if m:
             axis, pos  = m[0][0] , m[0][1]
-            self.moveFunction(axis,pos)
+            self.moveTo.emit(axis,pos)
             print(axis,pos)
         else:
             print("no axis found.")
@@ -56,7 +55,7 @@ class SES_API:
 
     def stop(self):
         print('stoping')
-        self.stopFunction()
+        self.Stop.emit()
 
     def send_status(self):
         print('send status',self.status)

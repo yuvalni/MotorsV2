@@ -7,9 +7,12 @@ from MotorsClass.mdrive_MOCK import Motor
 from time import sleep
 import threading
 from SESInterface.SESInterface import SES_API
+import numpy as np
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
+
+
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -208,6 +211,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.moving = False
         self.PolarLock = False
+        self.polar_vec = []
+        self.x_vec = []
+        self.y_vec = []
+
 
         self.motors = Motor()
         self.positions = dict()
@@ -256,6 +263,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 return False
         if ax in self.motors.axes:
             self.motors.go_step(ax, direction)
+
+    def stop(self):
+        self.motors.stop()
+        self.stoped.set()
 
     def updateLoop(self):
         self.serial_up.acquire(blocking=False) #Do not close serial!
@@ -327,14 +338,56 @@ class MainWindow(QtWidgets.QMainWindow):
         if state == SES_API.ConnectionStatus.Error:
             self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
 
+    def togglePolarLock(self):
+        self.PolarLock = not self.PolarLock
+        print(self.PolarLock)
+
+        
+    def SESmove(self,axis,pos):
+        assert axis == "R"
+        pos = float(pos)
+        #this will be called by the SES API to move an axis- probably the polar
+        if not self.PolarLock:
+            self.set_point(axis, pos)
+            return True
+        else:
+            #check if there is a polar data in current location,
+            if pos in polar_vec:
+                idx = polar_vec.index(pos)
+                _x = x_vec[idx]
+                _y = y_vec[idx]
+                _P = polar_vec[idx]
+
+            else:
+                if((pos>max(polar_vec))or(pos<min(polar_vec))):
+                    print("polar out of range.")
+                    return False
+                #if not, interpolat between nearest points.
+                p_array = np.array(polar_vec)
+                x_array = np.array(x_vec)
+                y_array = np.array(y_vec)
+                idx_sorted = p_array.argsort()
+
+                _x = np.interp(pos, p_array[idx_sorted], x_array[idx_sorted], left=None, right=None, period=None)
+                _y = np.interp(pos, p_array[idx_sorted], y_array[idx_sorted], left=None, right=None, period=None)
+                _P = pos
+
+
+            self.set_point("X", _x)
+            self.set_point("Y", _y)
+            self.set_point("R",_P)
+
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
     app.aboutToQuit.connect(window.closeWindowCallback)
     window.show() 
     window.startUpdateLoop()
-    #SESapi = SES_API()
-    #SESapi.ConnectionStatusChanged.connect(window.changeConnectionLED)
-    #window.threadpool.start(SESapi.handle_connection)
+    SESapi = SES_API()
+    SESapi.ConnectionStatusChanged.connect(window.changeConnectionLED)
+    SESapi.Stop.connect(window.stop)
+    SESapi.moveTo.connect(lambda ax,pos: window.SESmove(ax,pos))
+    window.threadpool.start(SESapi.handle_connection)
+
 
     app.exec()
