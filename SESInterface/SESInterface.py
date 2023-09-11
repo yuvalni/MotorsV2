@@ -20,7 +20,9 @@ class SES_API:
         Connected = 2
 
     ConnectionStatusChanged = Signal(object)
-
+    Stop = Signal()
+    moveTo = Signal(str,float)
+    
     def __init__(self,moveFunction,StopFunction):
         self.HOST = "127.0.0.1" 
         self.PORT = 5011  # Port to listen on

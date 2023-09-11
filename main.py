@@ -6,7 +6,7 @@ from settingsWidget.settingsWindow import SettingsWindow
 from MotorsClass.mdrive_MOCK import Motor
 from time import sleep
 import threading
-
+from SESInterface.SESInterface import SES_API
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -115,8 +115,10 @@ class MainWindow(QtWidgets.QMainWindow):
         
 
         
-        SESConnected = QtWidgets.QCheckBox()
-        SESConnected.setStyleSheet(u"QCheckBox::indicator {\n"
+        self.SESConnected = QtWidgets.QCheckBox()
+        self.SESConnected.setTristate(True)
+        self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
+        self.SESConnected.setStyleSheet(u"QCheckBox::indicator {\n"
                                                                         "    width:                  20px;\n"
                                                                         "    height:                 20px;\n"
                                                                         "    border-radius:          5px;\n"
@@ -130,8 +132,12 @@ class MainWindow(QtWidgets.QMainWindow):
                                                                         "QCheckBox::indicator:unchecked {\n"
                                                                         "    background-color:       rgb(255, 0, 0);\n"
                                                                         "    border:                 2px solid black;\n"
+                                                                        "}"
+                                                                        "QCheckBox::indicator:partiallychecked {\n"
+                                                                        "    background-color:       rgb(255, 255, 0);\n"
+                                                                        "    border:                 2px solid black;\n"
                                                                         "}")
-        LED_form.addRow("SES con.",SESConnected)
+        LED_form.addRow("SES con.",self.SESConnected)
         
         Button_Grid_layout.addItem(LED_form)
         
@@ -269,9 +275,7 @@ class MainWindow(QtWidgets.QMainWindow):
             sleep(0.05)
         self.serial_up.release() #Now you can close the serial connection
 
-    def startUpdateLoop(self):
-        self.update_loop.set()
-        self.threadpool.start(self.updateLoop)
+
         
     def check_movement(self):
         while True:
@@ -310,11 +314,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.serial_up.acquire(blocking=True,timeout=15)
         self.motors.close()
 
+    def startUpdateLoop(self):
+        self.update_loop.set()
+        self.threadpool.start(self.updateLoop)
+
+
+    def ChangeConnectionLED(self,state):
+        if state == SES_API.ConnectionStatus.Listening:
+            self.SESConnected.setCheckState(Qt.CheckState.PartiallyChecked)
+        if state == SES_API.ConnectionStatus.Connected:
+            self.SESConnected.setCheckState(Qt.CheckState.Checked)
+        if state == SES_API.ConnectionStatus.Error:
+            self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
+
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
-    
     window = MainWindow()
     app.aboutToQuit.connect(window.closeWindowCallback)
     window.show() 
     window.startUpdateLoop()
+    #SESapi = SES_API()
+    #SESapi.ConnectionStatusChanged.connect(window.changeConnectionLED)
+    #window.threadpool.start(SESapi.handle_connection)
+
     app.exec()
