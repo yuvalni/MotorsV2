@@ -149,6 +149,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Stop_Btn = QtWidgets.QPushButton(U"🛑")
         Stop_Btn.setStyleSheet("QPushButton { font: 40px;}")
         Stop_Btn.setToolTip("Stop")
+        Stop_Btn.clicked.connect(self.stop)
         Button_Grid_layout.addWidget(Stop_Btn)
         return Button_Grid_layout
     def CreateAxisLayout(self):
@@ -234,6 +235,7 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot(bool)
     def set_safeMode(self,mode):
         self.safeMode = mode
+        
     
     @QtCore.Slot(float)
     def go_to_pos(self,ax,pos):
@@ -267,6 +269,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def stop(self):
         self.motors.stop()
         self.stoped.set()
+        
 
     def updateLoop(self):
         self.serial_up.acquire(blocking=False) #Do not close serial!
