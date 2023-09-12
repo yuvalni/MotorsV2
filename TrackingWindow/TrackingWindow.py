@@ -8,7 +8,7 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
 class TrackingWindow(QtWidgets.QWidget):
-    NewPointAdded = QtCore.Signal(float,float,float)
+    VecsUpdated = QtCore.Signal(list,list,list)
     def __init__(self,P_vec=[],X_vec=[],Y_vec=[], *args, **kwargs):
         super(TrackingWindow, self).__init__(*args, **kwargs)
         self.P_vec = P_vec
@@ -84,7 +84,7 @@ class TrackingWindow(QtWidgets.QWidget):
         self.Yplot.setData(self.P_vec,self.Y_vec)
         QtWidgets.QListWidgetItem("({0},{1},{2})".format(P,X,Y),self.pointList)
         self.pointList.sortItems()
-        self.NewPointAdded.emit(P,X,Y)
+        self.VecsUpdated.emit(self.P_vec,self.X_vec,self.Y_vec)
 
     def loadVecToList(self):
         for p,x,y in zip(self.P_vec,self.X_vec,self.Y_vec):
@@ -92,8 +92,19 @@ class TrackingWindow(QtWidgets.QWidget):
         self.pointList.sortItems()
 
     def DelPoint(self):
-        print(self.pointList.currentItem())
-        print(self.pointList.currentRow())
+        if self.pointList.currentItem() == None:
+            return False
+        row = self.pointList.currentItem().text()
+        idx = self.P_vec.index(float(row.split('(')[1].split(',')[0]))
+        self.P_vec.pop(idx)
+        self.X_vec.pop(idx)
+        self.Y_vec.pop(idx)
+        self.pointList.takeItem(self.pointList.currentRow())
+        self.Xplot.setData(self.P_vec,self.X_vec)
+        self.Yplot.setData(self.P_vec,self.Y_vec)
+
+        self.VecsUpdated.emit(self.P_vec,self.X_vec,self.Y_vec)
+        
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)

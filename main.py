@@ -3,6 +3,7 @@ from PySide6.QtCore import Qt
 import sys
 from AxisWidget.AxisWidget import AxisWidget
 from settingsWidget.settingsWindow import SettingsWindow
+from TrackingWindow.TrackingWindow import TrackingWindow
 from MotorsClass.mdrive_MOCK import Motor
 from time import sleep
 import threading
@@ -61,6 +62,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings_window.PositionIsSet.connect(lambda name,pos: self.redefineMotorPosition(name,pos) )
         self.settings_window.show()
 
+    def show_Tracking_window(self):
+        self.Tracking_window = TrackingWindow(self.polar_vec,self.x_vec,self.y_vec)
+        self.Tracking_window.VecsUpdated.connect(self.updateVec)
+        self.Tracking_window.show()
+    def updateVec(self,polar_vec,x_vec,y_vec):
+        self.polar_vec = polar_vec
+        self.x_vec = x_vec
+        self.y_vec = y_vec
+
     def CreateButtonPanel(self):
         Button_Grid_layout = QtWidgets.QGridLayout()
         Settings_Btn = QtWidgets.QPushButton(U"⚙️")
@@ -76,6 +86,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Button_Grid_layout.addWidget(CopyPos_Btn)
 
         Tracking_Btn = QtWidgets.QPushButton(U"🗺️")
+        Tracking_Btn.clicked.connect(self.show_Tracking_window)
         Tracking_Btn.setStyleSheet("QPushButton { font: 40px; }")
         Tracking_Btn.setToolTip("Track XY Polar map")
         Button_Grid_layout.addWidget(Tracking_Btn)
