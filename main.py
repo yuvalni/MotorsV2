@@ -6,7 +6,37 @@ from settingsWidget.settingsWindow import SettingsWindow
 from MotorsClass.mdrive_MOCK import Motor
 from time import sleep
 import threading
+from SESInterface.SESInterface import SES_API
+import numpy as np
 
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
+
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+ch.setFormatter(formatter)
+root.addHandler(ch)
+
+logger = logging.getLogger('main')
+logger.setLevel(logging.DEBUG)
+InfoLog = logging.handlers.TimedRotatingFileHandler('./logs/info.log', when='D', interval=1,
+                                                    backupCount=7)  # log errors in a weekly file, save monthly backup
+InfoLog.setLevel(logging.INFO)
+InfoLog.setFormatter(formatter)
+logger.addHandler(InfoLog)
+
+Poslogger = logging.getLogger('Pos')
+Poslogger.setLevel(logging.DEBUG)
+PosLog = logging.handlers.TimedRotatingFileHandler('./logs/postion.log', when='D', interval=1,
+                                                   backupCount=7)  # log errors in a weekly file, save monthly backup
+PosLog.setLevel(logging.DEBUG)
+PosLog.setFormatter(formatter)
+Poslogger.addHandler(PosLog)
 
         
 def create_Hseperator():
@@ -88,8 +118,10 @@ class MainWindow(QtWidgets.QMainWindow):
         
 
         
-        SESConnected = QtWidgets.QCheckBox()
-        SESConnected.setStyleSheet(u"QCheckBox::indicator {\n"
+        self.SESConnected = QtWidgets.QCheckBox()
+        self.SESConnected.setTristate(True)
+        self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
+        self.SESConnected.setStyleSheet(u"QCheckBox::indicator {\n"
                                                                         "    width:                  20px;\n"
                                                                         "    height:                 20px;\n"
                                                                         "    border-radius:          5px;\n"
@@ -103,8 +135,12 @@ class MainWindow(QtWidgets.QMainWindow):
                                                                         "QCheckBox::indicator:unchecked {\n"
                                                                         "    background-color:       rgb(255, 0, 0);\n"
                                                                         "    border:                 2px solid black;\n"
+                                                                        "}"
+                                                                        "QCheckBox::indicator:partiallychecked {\n"
+                                                                        "    background-color:       rgb(255, 255, 0);\n"
+                                                                        "    border:                 2px solid black;\n"
                                                                         "}")
-        LED_form.addRow("SES con.",SESConnected)
+        LED_form.addRow("SES con.",self.SESConnected)
         
         Button_Grid_layout.addItem(LED_form)
         
@@ -113,6 +149,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Stop_Btn = QtWidgets.QPushButton(U"🛑")
         Stop_Btn.setStyleSheet("QPushButton { font: 40px;}")
         Stop_Btn.setToolTip("Stop")
+        Stop_Btn.clicked.connect(self.stop)
         Button_Grid_layout.addWidget(Stop_Btn)
         return Button_Grid_layout
     def CreateAxisLayout(self):
@@ -175,6 +212,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.moving = False
         self.PolarLock = False
+        self.polar_vec = []
+        self.x_vec = []
+        self.y_vec = []
+
 
         self.motors = Motor()
         self.positions = dict()
@@ -194,13 +235,14 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot(bool)
     def set_safeMode(self,mode):
         self.safeMode = mode
+        
     
     @QtCore.Slot(float)
     def go_to_pos(self,ax,pos):
-        #logger.info('{} sent to: {}. position: {}.'.format(ax, point, positions[ax]))
+        logger.info('{} sent to: {}. position: {}.'.format(ax, point, positions[ax]))
         if self.safeMode:
             if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
-                #logger.info('{} Out of range: {} of {} '.format(ax, point, allowd_range[ax]))
+                logger.info('{} Out of range: {} of {} '.format(ax, point, allowd_range[ax]))
                 return False
 
         self.moving = True
@@ -216,13 +258,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def moveStep(self,ax,direction):
-        #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, way, positions[ax]))
+        logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, way, positions[ax]))
         if self.safeMode:
             if (self.positions[ax] + direction * self.step_sizes[ax]) < self.allowd_range[ax][0] or (self.positions[ax] + direction * self.step_sizes[ax]) > self.allowd_range[ax][1]:
-                #logger.info('{} Out of range:{} of {} '.format(ax, positions[ax] + way * step_sizes[ax], allowd_range[ax]))
+                logger.info('{} Out of range:{} of {} '.format(ax, positions[ax] + way * step_sizes[ax], allowd_range[ax]))
                 return False
         if ax in self.motors.axes:
             self.motors.go_step(ax, direction)
+
+    def stop(self):
+        self.motors.stop()
+        self.stoped.set()
+        
 
     def updateLoop(self):
         self.serial_up.acquire(blocking=False) #Do not close serial!
@@ -242,9 +289,7 @@ class MainWindow(QtWidgets.QMainWindow):
             sleep(0.05)
         self.serial_up.release() #Now you can close the serial connection
 
-    def startUpdateLoop(self):
-        self.update_loop.set()
-        self.threadpool.start(self.updateLoop)
+
         
     def check_movement(self):
         while True:
@@ -268,26 +313,91 @@ class MainWindow(QtWidgets.QMainWindow):
                 return True
 
             sleep(0.05)
+
     def redefineMotorPosition(self,ax,pos):
         print(ax,pos)
         realPos = self.motors.set_pos(ax, float(pos))
-        #logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(real)))
+        logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(realPos)))
 
     def changeLimits(self,ax,high,low):
         self.allowd_range[ax] = (low,high)
         
-    def closeWindowCallback(self):
-        print("closing motor connection.")
+    def closeWindowCallback(self,SESapi):
+        logger.info("closing motor connection.")
         self.update_loop.clear() # now update loop is shutting down
+        SESapi.closeLoop()
         sleep(3)
         self.serial_up.acquire(blocking=True,timeout=15)
         self.motors.close()
 
+    def startUpdateLoop(self):
+        self.update_loop.set()
+        self.threadpool.start(self.updateLoop)
+
+
+    def ChangeConnectionLED(self,state):
+        if state == SES_API.ConnectionStatus.Listening:
+            self.SESConnected.setCheckState(Qt.CheckState.PartiallyChecked)
+        if state == SES_API.ConnectionStatus.Connected:
+            self.SESConnected.setCheckState(Qt.CheckState.Checked)
+        if state == SES_API.ConnectionStatus.Error:
+            self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
+
+    def togglePolarLock(self):
+        self.PolarLock = not self.PolarLock
+        print(self.PolarLock)
+
+        
+    def SESmove(self,axis,pos):
+        assert axis == "R"
+        pos = float(pos)
+        #this will be called by the SES API to move an axis- probably the polar
+        if not self.PolarLock:
+            self.set_point(axis, pos)
+            return True
+        else:
+            #check if there is a polar data in current location,
+            if pos in polar_vec:
+                idx = polar_vec.index(pos)
+                _x = x_vec[idx]
+                _y = y_vec[idx]
+                _P = polar_vec[idx]
+
+            else:
+                if((pos>max(polar_vec))or(pos<min(polar_vec))):
+                    print("polar out of range.")
+                    return False
+                #if not, interpolat between nearest points.
+                p_array = np.array(polar_vec)
+                x_array = np.array(x_vec)
+                y_array = np.array(y_vec)
+                idx_sorted = p_array.argsort()
+
+                _x = np.interp(pos, p_array[idx_sorted], x_array[idx_sorted], left=None, right=None, period=None)
+                _y = np.interp(pos, p_array[idx_sorted], y_array[idx_sorted], left=None, right=None, period=None)
+                _P = pos
+
+
+            self.set_point("X", _x)
+            self.set_point("Y", _y)
+            self.set_point("R",_P)
+
+        
+
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
-    
     window = MainWindow()
-    app.aboutToQuit.connect(window.closeWindowCallback)
+    
     window.show() 
     window.startUpdateLoop()
+    SESapi = SES_API()
+    SESapi.ConnectionStatusChanged.connect(lambda state: window.ChangeConnectionLED(state))
+    SESapi.Stop.connect(window.stop)
+    SESapi.moveTo.connect(lambda ax,pos: window.SESmove(ax,pos))
+    window.threadpool.start(SESapi.handle_connection)
+
+    app.aboutToQuit.connect(lambda: window.closeWindowCallback(SESapi))
+
+
+
     app.exec()
