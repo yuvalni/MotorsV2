@@ -4,14 +4,20 @@ import sys
 import pyqtgraph as pg
 
 
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+
 class TrackingWindow(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs):
         super(TrackingWindow, self).__init__(*args, **kwargs)
-
+        widget = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout()
-        plot1 = pg.PlotItem()
-        plot1.plot()
-        layout.addWidget(plot1)
+        widget.setLayout(layout)
+        
+        plotWidget = pg.PlotWidget(widget)
+        self.plot = plotWidget.plot(pen=None,symbol='o',symbolBrush=0.2)
+        layout.addWidget(plotWidget)
+        self.plot.plot([0,1],[2,3])
         self.setLayout(layout)
 
 
