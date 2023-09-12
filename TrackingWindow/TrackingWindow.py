@@ -17,8 +17,9 @@ class TrackingWindow(QtWidgets.QWidget):
         widget = QtWidgets.QWidget()
         HorizontalLayout = QtWidgets.QHBoxLayout()
         widget.setLayout(HorizontalLayout)
-        
         plotWidget = pg.PlotWidget(widget)
+        
+        #widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum,QtWidgets.QSizePolicy.Policy.MinimumExpanding)
         plotItem = plotWidget.getPlotItem()
         
 
@@ -27,7 +28,7 @@ class TrackingWindow(QtWidgets.QWidget):
         VerticalLayout = QtWidgets.QVBoxLayout()
         HorizontalLayout.addLayout(VerticalLayout)
         self.pointList = QtWidgets.QListWidget()
-        
+        #self.pointList.setFixedWidth(100)
         #QtWidgets.QListWidgetItem("(1,2,3)",self.pointList)
         VerticalLayout.addWidget(self.pointList)
         
@@ -61,11 +62,15 @@ class TrackingWindow(QtWidgets.QWidget):
 
 
         DelPoint_Btn = QtWidgets.QPushButton("Delete Point")
+        #DelPoint_Btn.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum,QtWidgets.QSizePolicy.Policy.Fixed)
         DelPoint_Btn.clicked.connect(self.DelPoint)
         VerticalLayout.addWidget(DelPoint_Btn)
         
         VerticalLayout.addWidget(SetNewPoint_group)
-
+        saveLoad_layout = QtWidgets.QHBoxLayout()
+        VerticalLayout.addLayout(saveLoad_layout)
+        saveLoad_layout.addWidget(QtWidgets.QPushButton("Load list"))
+        saveLoad_layout.addWidget(QtWidgets.QPushButton("Save list"))
         self.setLayout(HorizontalLayout)
 
     def addNewPoint(self):
@@ -104,7 +109,9 @@ class TrackingWindow(QtWidgets.QWidget):
         self.Yplot.setData(self.P_vec,self.Y_vec)
 
         self.VecsUpdated.emit(self.P_vec,self.X_vec,self.Y_vec)
-        
+
+    def show_current_position(self):
+        pass  
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
