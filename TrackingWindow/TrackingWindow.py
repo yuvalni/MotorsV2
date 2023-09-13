@@ -11,6 +11,7 @@ class TrackingWindow(QtWidgets.QWidget):
     VecsUpdated = QtCore.Signal(list,list,list)
     def __init__(self,P_vec=[],X_vec=[],Y_vec=[], *args, **kwargs):
         super(TrackingWindow, self).__init__(*args, **kwargs)
+        self.pos = ()
         self.P_vec = P_vec
         self.X_vec = X_vec
         self.Y_vec = Y_vec
@@ -39,7 +40,8 @@ class TrackingWindow(QtWidgets.QWidget):
             self.Xplot = plotItem.plot(self.P_vec,self.X_vec,pen=None,symbol='o',symbolBrush=(0,0,200))
             self.Yplot = plotItem.plot(self.P_vec,self.Y_vec,pen=None,symbol='o',symbolBrush=(255,140,0))
             self.loadVecToList()
-        
+        self.Xlocation = plotItem.plot(pen=None,symbol='+',symbolBrush=(0,0,200))
+        self.Ylocation = plotItem.plot(pen=None,symbol='+',symbolBrush=(255,140,0))    
         SetNewPoint_group = QtWidgets.QGroupBox("New Point")
         #SetNewPoint_group.setStyleSheet("QGroupBox{font: 24px;}")
         SetNewPoint_grid = QtWidgets.QGridLayout() 
@@ -71,6 +73,7 @@ class TrackingWindow(QtWidgets.QWidget):
         VerticalLayout.addLayout(saveLoad_layout)
         saveLoad_layout.addWidget(QtWidgets.QPushButton("Load list"))
         saveLoad_layout.addWidget(QtWidgets.QPushButton("Save list"))
+        saveLoad_layout.addWidget(QtWidgets.QPushButton("Add current position"))
         self.setLayout(HorizontalLayout)
 
     def addNewPoint(self):
@@ -109,10 +112,13 @@ class TrackingWindow(QtWidgets.QWidget):
         self.Yplot.setData(self.P_vec,self.Y_vec)
 
         self.VecsUpdated.emit(self.P_vec,self.X_vec,self.Y_vec)
-
-    def show_current_position(self):
-        pass  
-
+    
+    @QtCore.Slot(float,float,float)
+    def update_current_position(self,p,x,y):
+        self.pos = (p,x,y)
+        self.Xlocation.setData([p],[x])
+        self.Ylocation.setData([p],[y])
+    
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
     tracking = TrackingWindow(P_vec=[1,2,3,4],X_vec=[2.1,2.3,2.5,3],Y_vec=[5,4.9,4.6,4.2])

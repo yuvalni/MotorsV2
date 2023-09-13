@@ -210,6 +210,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self,*args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
+        self.Tracking_window = None
         self.threadpool = QtCore.QThreadPool()
         #locks:
         self.update_loop = threading.Event()
@@ -269,10 +270,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def moveStep(self,ax,direction):
-        logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, way, positions[ax]))
+        logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, direction, self.positions[ax]))
         if self.safeMode:
             if (self.positions[ax] + direction * self.step_sizes[ax]) < self.allowd_range[ax][0] or (self.positions[ax] + direction * self.step_sizes[ax]) > self.allowd_range[ax][1]:
-                logger.info('{} Out of range:{} of {} '.format(ax, positions[ax] + way * step_sizes[ax], allowd_range[ax]))
+                logger.info('{} Out of range:{} of {} '.format(ax, self.positions[ax] + direction * self.step_sizes[ax], self.allowd_range[ax]))
                 return False
         if ax in self.motors.axes:
             self.motors.go_step(ax, direction)
@@ -290,13 +291,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 if pos != 'Not Connected':
                     self.positions[ax] = float(pos)
                     self.axis[ax].setPosition(float(pos))
-            #api.pos = positions #this needs to speak the same language with API!
-            #if moving:
-            #    api.status = Status.MOVING
-            #    eel.set_gui_moving(True)
-            #else:
-            #    api.status = Status.DONE
-            #    eel.set_gui_moving(False)
+            SESapi.pos = self.positions #this needs to speak the same language with API!
+            if self.moving:
+                SESapi.status = SES_API.ManipulatorStatus.MOVING
+            else:
+                SESapi.status = SES_API.ManipulatorStatus.DONE
+            if self.Tracking_window is not None:
+                if self.Tracking_window.isVisible():
+                    self.Tracking_window.update_current_position(self.positions["R"],self.positions["X"],self.positions["Y"])
             sleep(0.05)
         self.serial_up.release() #Now you can close the serial connection
 
