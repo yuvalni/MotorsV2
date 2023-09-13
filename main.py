@@ -9,7 +9,7 @@ from time import sleep
 import threading
 from SESInterface.SESInterface import SES_API
 import numpy as np
-
+from time import time
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
@@ -251,10 +251,10 @@ class MainWindow(QtWidgets.QMainWindow):
     
     @QtCore.Slot(float)
     def go_to_pos(self,ax,pos):
-        logger.info('{} sent to: {}. position: {}.'.format(ax, point, positions[ax]))
+        #logger.info('{} sent to: {}. position: {}.'.format(ax, pos, positions[ax]))
         if self.safeMode:
             if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
-                logger.info('{} Out of range: {} of {} '.format(ax, point, allowd_range[ax]))
+                logger.info('{} Out of range: {} of {} '.format(ax, pos, self.allowd_range[ax]))
                 return False
 
         self.moving = True
@@ -270,7 +270,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def moveStep(self,ax,direction):
-        logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, direction, self.positions[ax]))
+        #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, direction, self.positions[ax]))
         if self.safeMode:
             if (self.positions[ax] + direction * self.step_sizes[ax]) < self.allowd_range[ax][0] or (self.positions[ax] + direction * self.step_sizes[ax]) > self.allowd_range[ax][1]:
                 logger.info('{} Out of range:{} of {} '.format(ax, self.positions[ax] + direction * self.step_sizes[ax], self.allowd_range[ax]))
@@ -285,6 +285,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def updateLoop(self):
         self.serial_up.acquire(blocking=False) #Do not close serial!
+        last_update = time()
         while self.update_loop.is_set():
             for ax in self.motors.axes:
                 pos = self.motors.get_pos(ax)
@@ -298,7 +299,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 SESapi.status = SES_API.ManipulatorStatus.DONE
             if self.Tracking_window is not None:
                 if self.Tracking_window.isVisible():
-                    self.Tracking_window.update_current_position(self.positions["R"],self.positions["X"],self.positions["Y"])
+                    if time()-last_update > 1:
+                        last_update = time()
+                        self.Tracking_window.update_current_position(self.positions["R"],self.positions["X"],self.positions["Y"])
             sleep(0.05)
         self.serial_up.release() #Now you can close the serial connection
 

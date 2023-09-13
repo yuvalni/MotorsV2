@@ -73,7 +73,9 @@ class TrackingWindow(QtWidgets.QWidget):
         VerticalLayout.addLayout(saveLoad_layout)
         saveLoad_layout.addWidget(QtWidgets.QPushButton("Load list"))
         saveLoad_layout.addWidget(QtWidgets.QPushButton("Save list"))
-        saveLoad_layout.addWidget(QtWidgets.QPushButton("Add current position"))
+        addCurrentPos_Btn = QtWidgets.QPushButton("Add current position")
+        addCurrentPos_Btn.clicked.connect(self.addCurrentPosition)
+        saveLoad_layout.addWidget(addCurrentPos_Btn)
         self.setLayout(HorizontalLayout)
 
     def addNewPoint(self):
@@ -119,6 +121,17 @@ class TrackingWindow(QtWidgets.QWidget):
         self.Xlocation.setData([p],[x])
         self.Ylocation.setData([p],[y])
     
+    def addCurrentPosition(self):
+        self.P_vec.append(self.pos[0])
+        self.X_vec.append(self.pos[1])
+        self.Y_vec.append(self.pos[2])
+        self.Xplot.setData(self.P_vec,self.X_vec)
+        self.Yplot.setData(self.P_vec,self.Y_vec)
+        self.VecsUpdated.emit(self.P_vec,self.X_vec,self.Y_vec)
+        QtWidgets.QListWidgetItem("({0},{1},{2})".format(self.pos[0],self.pos[1],self.pos[2]),self.pointList)
+        self.pointList.sortItems()
+
+
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
     tracking = TrackingWindow(P_vec=[1,2,3,4],X_vec=[2.1,2.3,2.5,3],Y_vec=[5,4.9,4.6,4.2])
