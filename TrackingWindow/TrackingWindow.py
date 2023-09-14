@@ -60,7 +60,7 @@ class TrackingWindow(QtWidgets.QWidget):
         SetNewPoint_grid.addWidget(self.SetNewPoint_X,1,1)
         SetNewPoint_grid.addWidget(SetNewPoint_Y_label,0,2)
         SetNewPoint_grid.addWidget(self.SetNewPoint_Y,1,2)
-        self.SetNewPoint_P.setValidator(double_validator)
+        self.SetNewPoint_P.setValidator(double_valida tor)
         self.SetNewPoint_X.setValidator(double_validator)
         self.SetNewPoint_Y.setValidator(double_validator)
         SetNewPoint_Btn = QtWidgets.QPushButton("add Point")
