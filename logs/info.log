@@ -158,3 +158,5 @@
 2023-09-13 15:26:07,672 - main - INFO - X moved one step. direction:-1.0. current position: -0.3.
 2023-09-13 15:26:09,144 - main - INFO - Y moved one step. direction:-1.0. current position: 0.0.
 2023-09-13 15:26:13,420 - main - INFO - closing motor connection.
+2023-09-14 17:05:38,473 - main - INFO - X Out of range: 4.0 of (-10, 3) 
+2023-09-14 17:06:21,693 - main - INFO - closing motor connection.

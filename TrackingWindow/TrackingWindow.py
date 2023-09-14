@@ -20,6 +20,8 @@ class TrackingWindow(QtWidgets.QWidget):
         widget.setLayout(HorizontalLayout)
         plotWidget = pg.PlotWidget(widget)
         
+
+        double_validator = QtGui.QDoubleValidator()
         #widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum,QtWidgets.QSizePolicy.Policy.MinimumExpanding)
         plotItem = plotWidget.getPlotItem()
         
@@ -58,6 +60,9 @@ class TrackingWindow(QtWidgets.QWidget):
         SetNewPoint_grid.addWidget(self.SetNewPoint_X,1,1)
         SetNewPoint_grid.addWidget(SetNewPoint_Y_label,0,2)
         SetNewPoint_grid.addWidget(self.SetNewPoint_Y,1,2)
+        self.SetNewPoint_P.setValidator(double_validator)
+        self.SetNewPoint_X.setValidator(double_validator)
+        self.SetNewPoint_Y.setValidator(double_validator)
         SetNewPoint_Btn = QtWidgets.QPushButton("add Point")
         SetNewPoint_Btn.clicked.connect(self.addNewPoint)
         SetNewPoint_grid.addWidget(SetNewPoint_Btn,1,3)
