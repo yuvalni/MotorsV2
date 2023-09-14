@@ -299,7 +299,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 SESapi.status = SES_API.ManipulatorStatus.DONE
             if self.Tracking_window is not None:
                 if self.Tracking_window.isVisible():
-                    if time()-last_update > 1:
+                    if time()-last_update > 0.2:
                         last_update = time()
                         self.Tracking_window.update_current_position(self.positions["R"],self.positions["X"],self.positions["Y"])
             sleep(0.05)
