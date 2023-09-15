@@ -399,7 +399,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.set_point("Y", _y)
             self.set_point("R",_P)
 
-        
+    def keyPressEvent(self,event):
+        if event.key() == Qt.Key.Key_Escape:
+            self.stop()
+
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
