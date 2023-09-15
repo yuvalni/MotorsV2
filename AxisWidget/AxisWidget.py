@@ -25,7 +25,7 @@ class AxisWidget(QtWidgets.QWidget):
         axisName.setStyleSheet('font: 40px;')
         layout.addWidget(axisName)
         
-        self.pos = QtWidgets.QLabel("0.00")
+        self.pos = QtWidgets.QLabel("0.0")
         self.pos.setStyleSheet('font: 40px;')
         layout.addWidget(self.pos)
 

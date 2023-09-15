@@ -125,7 +125,8 @@ class MainWindow(QtWidgets.QMainWindow):
                                                                         "    background-color:       rgb(255, 0, 0);\n"
                                                                         "    border:                 2px solid black;\n"
                                                                         "}")
-        LED_form.addRow("Stoped Moving ",self.manipulatorStopdMoving_LED)
+        LED_form.addRow("Movement Done ",self.manipulatorStopdMoving_LED)
+        LED_form.setHorizontalSpacing(4)
         
 
         
@@ -151,7 +152,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                                                         "    background-color:       rgb(255, 255, 0);\n"
                                                                         "    border:                 2px solid black;\n"
                                                                         "}")
-        LED_form.addRow("SES con.",self.SESConnected)
+        LED_form.addRow("SES connection",self.SESConnected)
         
         Button_Grid_layout.addItem(LED_form)
         
@@ -231,7 +232,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.motors = Motor()
         self.positions = dict()
-        self.positions = {"X":0,"Y":0,"Z":0,"R":0}
+        self.positions = {"X":0.0,"Y":0.0,"Z":0.0,"R":0.0}
         self.set_positions = dict() # this is the set positions... rather then the actual positions...
         self.allowd_range = {'X': (-10, 3), 'Y': (-9, 11.5), 'Z': ( -165,0), 'R': (-30, 2), 'P': (70, 200),
                         'T': (-400, 400)}  # this needs to be refined.
