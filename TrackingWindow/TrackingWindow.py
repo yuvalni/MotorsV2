@@ -16,9 +16,11 @@ class TrackingWindow(QtWidgets.QWidget):
         self.X_vec = X_vec
         self.Y_vec = Y_vec
         widget = QtWidgets.QWidget()
+        
         HorizontalLayout = QtWidgets.QHBoxLayout()
         widget.setLayout(HorizontalLayout)
         plotWidget = pg.PlotWidget(widget)
+        
         
 
         double_validator = QtGui.QDoubleValidator()
@@ -26,10 +28,10 @@ class TrackingWindow(QtWidgets.QWidget):
         plotItem = plotWidget.getPlotItem()
         
 
-        HorizontalLayout.addWidget(plotWidget)
+        HorizontalLayout.addWidget(plotWidget,stretch=20)
 
         VerticalLayout = QtWidgets.QVBoxLayout()
-        HorizontalLayout.addLayout(VerticalLayout)
+        HorizontalLayout.addLayout(VerticalLayout,stretch=1)
         self.pointList = QtWidgets.QListWidget()
         #self.pointList.setFixedWidth(100)
         #QtWidgets.QListWidgetItem("(1,2,3)",self.pointList)
@@ -60,7 +62,7 @@ class TrackingWindow(QtWidgets.QWidget):
         SetNewPoint_grid.addWidget(self.SetNewPoint_X,1,1)
         SetNewPoint_grid.addWidget(SetNewPoint_Y_label,0,2)
         SetNewPoint_grid.addWidget(self.SetNewPoint_Y,1,2)
-        self.SetNewPoint_P.setValidator(double_valida tor)
+        self.SetNewPoint_P.setValidator(double_validator)
         self.SetNewPoint_X.setValidator(double_validator)
         self.SetNewPoint_Y.setValidator(double_validator)
         SetNewPoint_Btn = QtWidgets.QPushButton("add Point")
