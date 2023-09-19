@@ -78,8 +78,14 @@ class TrackingWindow(QtWidgets.QWidget):
         VerticalLayout.addWidget(SetNewPoint_group)
         saveLoad_layout = QtWidgets.QHBoxLayout()
         VerticalLayout.addLayout(saveLoad_layout)
-        saveLoad_layout.addWidget(QtWidgets.QPushButton("Load list"))
-        saveLoad_layout.addWidget(QtWidgets.QPushButton("Save list"))
+        load_list_Btn = QtWidgets.QPushButton("Load list")
+        load_list_Btn.setDisabled(True)
+        saveLoad_layout.addWidget(load_list_Btn)
+        
+        save_list_Btn = QtWidgets.QPushButton("Save list")
+        save_list_Btn.setDisabled(True)
+        
+        saveLoad_layout.addWidget(save_list_Btn)
         addCurrentPos_Btn = QtWidgets.QPushButton("Add current position")
         addCurrentPos_Btn.clicked.connect(self.addCurrentPosition)
         saveLoad_layout.addWidget(addCurrentPos_Btn)
@@ -94,9 +100,16 @@ class TrackingWindow(QtWidgets.QWidget):
         P = float(P)
         X = float(X)
         Y = float(Y)
-        self.P_vec.append(P)
-        self.X_vec.append(X)
-        self.Y_vec.append(Y)
+        if P in self.P_vec:
+            index = self.P_vec.index(P)
+            self.X_vec[index] = X
+            self.Y_vec[index] = Y
+            #there already exist a point with this polar!
+            #replace it!
+        else:
+            self.P_vec.append(P)
+            self.X_vec.append(X)
+            self.Y_vec.append(Y)
         self.Xplot.setData(self.P_vec,self.X_vec)
         self.Yplot.setData(self.P_vec,self.Y_vec)
         QtWidgets.QListWidgetItem("({0},{1},{2})".format(P,X,Y),self.pointList)
@@ -129,9 +142,16 @@ class TrackingWindow(QtWidgets.QWidget):
         self.Ylocation.setData([p],[y])
     
     def addCurrentPosition(self):
-        self.P_vec.append(self.pos[0])
-        self.X_vec.append(self.pos[1])
-        self.Y_vec.append(self.pos[2])
+        if self.pos[0] in self.P_vec:
+            index = self.P_vec.index(self.pos[0])
+            self.X_vec[index] = self.pos[1]
+            self.Y_vec[index] = self.pos[2]
+            #there already exist a point with this polar!
+            #replace it!
+        else:
+            self.P_vec.append(self.pos[0])
+            self.X_vec.append(self.pos[1])
+            self.Y_vec.append(self.pos[2])
         self.Xplot.setData(self.P_vec,self.X_vec)
         self.Yplot.setData(self.P_vec,self.Y_vec)
         self.VecsUpdated.emit(self.P_vec,self.X_vec,self.Y_vec)
