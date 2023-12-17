@@ -52,7 +52,15 @@ class SES_API(QObject):
          #axis = self.pos_reg.search(data.decode("UTF-8")).group(0)
          axis = data.replace("?","")
          #print('sending pos')
-         #print("{}\n".format(self.pos[axis]))
+
+         #Currently we do not implement T and phi
+         if "T" in axis:
+             self.conn.send("0.0\n".encode())
+             return True
+         if "P" in axis:
+             self.conn.send("0.0\n".encode())
+             return True
+
          self.conn.send("{}\n".format(self.pos[axis]).encode())
 
     def stop(self):
@@ -76,6 +84,7 @@ class SES_API(QObject):
         self.run = False
 
     def handle_connection(self):#this is main loop.
+        print(self.ConnectionStatus.Connected)
         self.ConnectionStatusChanged.emit(self.ConnectionStatus.Error)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setblocking(True)
@@ -104,8 +113,10 @@ class SES_API(QObject):
 
                     while self.connected and self.run:
                         #we are stuck here!
+
                         try:
                             data = self.conn.recv(512)
+
                         except socket.timeout as e:
                             #print(e)
                             #print("non blocking")
@@ -113,10 +124,12 @@ class SES_API(QObject):
                             continue
 
                         if data == b'':
+
                             sleep(0.01)
                             continue
 
                         for data in data.decode("UTF-8").split('\n'):
+
                             if("?" in data):
                                 self.handle_req(data) #Handle data request
                             elif "MOV" in data: #MOVX5.0 for example
