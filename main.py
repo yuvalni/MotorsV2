@@ -4,7 +4,7 @@ import sys
 from AxisWidget.AxisWidget import AxisWidget
 from settingsWidget.settingsWindow import SettingsWindow
 from TrackingWindow.TrackingWindow import TrackingWindow
-from MotorsClass.mdrive_MOCK import Motor
+from MotorsClass.mdrive import Motor
 from time import sleep
 import threading
 from SESInterface.SESInterface import SES_API
@@ -167,20 +167,20 @@ class MainWindow(QtWidgets.QMainWindow):
     def CreateAxisLayout(self):
         self.axis = {}
         Axis_Grid_layout = QtWidgets.QGridLayout()
-        Xaxis = AxisWidget("X",-20,20)
+        Xaxis = AxisWidget("X",-20,20,pos_btn_txt=u"⇦",neg_btn_txt=u"⇨")
         Xaxis.MoveButtonClicked.connect(self.moveStep)
         Xaxis.GoToPosClicked.connect(self.go_to_pos)
         Xaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(Xaxis)
         self.axis["X"] = Xaxis
-        Yaxis = AxisWidget("Y",-10,10)
+        Yaxis = AxisWidget("Y",-10,10,pos_btn_txt=u"⊙",neg_btn_txt=u"⊗")
         Yaxis.MoveButtonClicked.connect(self.moveStep)
         Yaxis.GoToPosClicked.connect(self.go_to_pos)
         Yaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(create_Hseperator())
         Axis_Grid_layout.addWidget(Yaxis)
         self.axis["Y"] = Yaxis
-        Zaxis = AxisWidget("Z",-135,0)
+        Zaxis = AxisWidget("Z",-135,0,pos_btn_txt=u"⇑",neg_btn_txt=u"⇓")
         Zaxis.MoveButtonClicked.connect(self.moveStep)
         Zaxis.GoToPosClicked.connect(self.go_to_pos)
         Zaxis.SetStep.connect(self.set_step)
@@ -188,7 +188,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Axis_Grid_layout.addWidget(Zaxis)
         self.axis["Z"] = Zaxis
         #Paxis = AxisWidget(u"θ",-30,30,1)
-        Paxis = AxisWidget("R",-30,30,1)
+        Paxis = AxisWidget("R",-30,30,1,pos_btn_txt=u"↺",neg_btn_txt=u"↻")
         Paxis.MoveButtonClicked.connect(self.moveStep)
         Paxis.GoToPosClicked.connect(self.go_to_pos)
         Paxis.SetStep.connect(self.set_step)
@@ -234,7 +234,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.positions = dict()
         self.positions = {"X":0.0,"Y":0.0,"Z":0.0,"R":0.0}
         self.set_positions = dict() # this is the set positions... rather then the actual positions...
-        self.allowd_range = {'X': (-10, 3), 'Y': (-9, 11.5), 'Z': ( -165,0), 'R': (-30, 2), 'P': (70, 200),
+        self.allowd_range = {'X': (-10, 1), 'Y': (-9, 10), 'Z': ( -140,0), 'R': (-30, 15), 'P': (70, 200),
                         'T': (-400, 400)}  # this needs to be refined.
         self.step_sizes = {**self.motors.step}
         self.safeMode = True
@@ -247,6 +247,7 @@ class MainWindow(QtWidgets.QMainWindow):
     
     @QtCore.Slot(bool)
     def set_safeMode(self,mode):
+        logger.info('Safe mode on: {}'.format(mode))
         self.safeMode = mode
         
     
@@ -336,7 +337,8 @@ class MainWindow(QtWidgets.QMainWindow):
         realPos = self.motors.set_pos(ax, float(pos))
         logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(realPos)))
 
-    def changeLimits(self,ax,high,low):
+    def changeLimits(self,ax,low,high):
+        logger.info('Set limit of {0} from ({1},{2})to: ({3},{4})'.format(ax,self.allowd_range[ax][0],self.allowd_range[ax][1], low,high))
         self.allowd_range[ax] = (low,high)
         
     def closeWindowCallback(self,SESapi):
@@ -356,6 +358,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if state == SES_API.ConnectionStatus.Listening:
             self.SESConnected.setCheckState(Qt.CheckState.PartiallyChecked)
         if state == SES_API.ConnectionStatus.Connected:
+            print("green")
             self.SESConnected.setCheckState(Qt.CheckState.Checked)
         if state == SES_API.ConnectionStatus.Error:
             self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
