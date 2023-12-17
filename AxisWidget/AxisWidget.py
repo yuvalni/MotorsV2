@@ -8,34 +8,34 @@ class AxisWidget(QtWidgets.QWidget):
     GoToPosClicked = QtCore.Signal(str,float)
     SetStep = QtCore.Signal(str,float)
 
-    def __init__(self,name,min=-10,max=10,stepsizeDefault=0.1, *args, **kwargs):
+    def __init__(self,name,min=-10,max=10,stepsizeDefault=0.1,pos_btn_txt =u"⇦" ,neg_btn_txt=u"⇨", *args, **kwargs):
         super(AxisWidget, self).__init__(*args, **kwargs)
         self.name = name
         
         
         layout = QtWidgets.QHBoxLayout()
 
-        leftBtn = QtWidgets.QPushButton(u"⇦")
-        leftBtn.setStyleSheet('font: 40px;')
-        leftBtn.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum)
-        leftBtn.clicked.connect(lambda: self.buttonPress("left"))
-        layout.addWidget(leftBtn)
+        posBtn = QtWidgets.QPushButton(pos_btn_txt)
+        posBtn.setStyleSheet('font: 40px;')
+        posBtn.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum)
+        posBtn.clicked.connect(lambda: self.buttonPress("positive"))
+        layout.addWidget(posBtn)
 
         axisName = QtWidgets.QLabel("{}: ".format(name))
         axisName.setStyleSheet('font: 40px;')
         layout.addWidget(axisName)
         
-        self.pos = QtWidgets.QLabel("0.0")
+        self.pos = QtWidgets.QLabel("0.00")
         self.pos.setStyleSheet('font: 40px;')
         layout.addWidget(self.pos)
 
-        rightBtn = QtWidgets.QPushButton(u"⇨")
-        rightBtn.setStyleSheet('font: 40px;')
-        rightBtn.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum)
+        negBtn = QtWidgets.QPushButton(neg_btn_txt)
+        negBtn.setStyleSheet('font: 40px;')
+        negBtn.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum)
 
-        rightBtn.clicked.connect(lambda: self.buttonPress("right"))
+        negBtn.clicked.connect(lambda: self.buttonPress("negative"))
 
-        layout.addWidget(rightBtn)
+        layout.addWidget(negBtn)
 
         goToPointLayout = QtWidgets.QVBoxLayout()
         goToPointForm = QtWidgets.QFormLayout()
@@ -65,7 +65,7 @@ class AxisWidget(QtWidgets.QWidget):
         self.setLayout(layout)
 
     def buttonPress(self,direction):
-        if direction == 'right':
+        if direction == 'positive':
             self.MoveButtonClicked.emit(self.name,1)
         else:
             self.MoveButtonClicked.emit(self.name,-1)
@@ -77,7 +77,8 @@ class AxisWidget(QtWidgets.QWidget):
         self.SetStep.emit(self.name,self.SetStepSize.value())
 
     def setPosition(self,pos):
-        self.pos.setNum(pos)
+        self.pos.setText("{:0.2f}".format(pos))
+        #self.pos.setNum(round(pos,2))
 
 
 if __name__=="__main__":
