@@ -100,6 +100,14 @@ class MainWindow(QtWidgets.QMainWindow):
         #SafeMode_Btn.toggled.connect()  This will pass True/False if btn is checked or not.
         Button_Grid_layout.addWidget(SafeMode_Btn)
 
+        PolarLock_Btn = QtWidgets.QPushButton(U"🔒")
+        PolarLock_Btn.setStyleSheet("QPushButton { font: 40px; }")
+        PolarLock_Btn.setToolTip("Safe Mode")
+        PolarLock_Btn.setCheckable(True)
+        PolarLock_Btn.setChecked(False)
+        PolarLock_Btn.toggled.connect(self.togglePolarLock)
+        Button_Grid_layout.addWidget(PolarLock_Btn)
+
         verticalSpacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         Button_Grid_layout.addItem(verticalSpacer)
 
@@ -133,6 +141,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.SESConnected = QtWidgets.QCheckBox()
         self.SESConnected.setTristate(True)
         self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
+        self.SESConnected.setEnabled(False)
         self.SESConnected.setStyleSheet(u"QCheckBox::indicator {\n"
                                                                         "    width:                  20px;\n"
                                                                         "    height:                 20px;\n"
@@ -147,9 +156,25 @@ class MainWindow(QtWidgets.QMainWindow):
                                                                         "QCheckBox::indicator:unchecked {\n"
                                                                         "    background-color:       rgb(255, 0, 0);\n"
                                                                         "    border:                 2px solid black;\n"
-                                                                        "}"
+                                                                        "}\n"
+                                                                        "\n"
                                                                         "QCheckBox::indicator:partiallychecked {\n"
                                                                         "    background-color:       rgb(255, 255, 0);\n"
+                                                                        "    border:                 2px solid black;\n"
+                                                                        "}")
+        self.SESConnected.setStyleSheet(u"QCheckBox::indicator {\n"
+                                                                        "    width:                  20px;\n"
+                                                                        "    height:                 20px;\n"
+                                                                        "    border-radius:          5px;\n"
+                                                                        "}\n"
+                                                                        "\n"
+                                                                        "QCheckBox::indicator:checked {\n"
+                                                                        "    background-color:       rgb(85, 255, 0);\n"
+                                                                        "    border:                 2px solid black;\n"
+                                                                        "}\n"
+                                                                        "\n"
+                                                                        "QCheckBox::indicator:unchecked {\n"
+                                                                        "    background-color:       rgb(255, 0, 0);\n"
                                                                         "    border:                 2px solid black;\n"
                                                                         "}")
         LED_form.addRow("SES connection",self.SESConnected)
@@ -301,7 +326,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 SESapi.status = SES_API.ManipulatorStatus.DONE
             if self.Tracking_window is not None:
                 if self.Tracking_window.isVisible():
-                    if time()-last_update > 0.2:
+                    if time()-last_update > 1:
                         last_update = time()
                         self.Tracking_window.update_current_position(self.positions["R"],self.positions["X"],self.positions["Y"])
             sleep(0.05)
@@ -363,9 +388,10 @@ class MainWindow(QtWidgets.QMainWindow):
         if state == SES_API.ConnectionStatus.Error:
             self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
 
-    def togglePolarLock(self):
-        self.PolarLock = not self.PolarLock
-        print(self.PolarLock)
+    @QtCore.Slot(bool)
+    def togglePolarLock(self,state):
+        logger.info('Polar Lock on: {}'.format(state))
+        self.PolarLock = state
 
         
     def SESmove(self,axis,pos):
