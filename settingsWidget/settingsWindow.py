@@ -38,7 +38,7 @@ class SettingsWindow(QtWidgets.QWidget):
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
-    allowd_range = {'X': (-10, 3), 'Y': (-9, 11.5), 'Z': ( -165,0), 'R': (-30, 2), 'P': (70, 200),
+    allowd_range = {'X': (-10, 3), 'Y': (-9, 10), 'Z': ( -140,0), 'R': (-30, 2), 'P': (70, 200),
                         'T': (-400, 400)}  # this needs to be refined.
     positions = {"X":0,"Y":0,"Z":0,"R":0}
     
