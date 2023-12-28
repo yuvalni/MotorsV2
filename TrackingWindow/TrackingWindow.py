@@ -44,8 +44,8 @@ class TrackingWindow(QtWidgets.QWidget):
             self.Xplot = plotItem.plot(self.P_vec,self.X_vec,pen=None,symbol='o',symbolBrush=(0,0,200))
             self.Yplot = plotItem.plot(self.P_vec,self.Y_vec,pen=None,symbol='o',symbolBrush=(255,140,0))
             self.loadVecToList()
-        self.Xlocation = plotItem.plot(pen=None,symbol='+',symbolBrush=(0,0,200))
-        self.Ylocation = plotItem.plot(pen=None,symbol='+',symbolBrush=(255,140,0))    
+        #self.Xlocation = plotItem.plot(pen=None,symbol='+',symbolBrush=(0,0,200))
+        #self.Ylocation = plotItem.plot(pen=None,symbol='+',symbolBrush=(255,140,0))
         SetNewPoint_group = QtWidgets.QGroupBox("New Point")
         #SetNewPoint_group.setStyleSheet("QGroupBox{font: 24px;}")
         SetNewPoint_grid = QtWidgets.QGridLayout() 
@@ -138,8 +138,8 @@ class TrackingWindow(QtWidgets.QWidget):
     @QtCore.Slot(float,float,float)
     def update_current_position(self,p,x,y):
         self.pos = (p,x,y)
-        self.Xlocation.setData([p],[x])
-        self.Ylocation.setData([p],[y])
+        #self.Xlocation.setData([p],[x])
+        #self.Ylocation.setData([p],[y])
     
     def addCurrentPosition(self):
         if self.pos[0] in self.P_vec:
