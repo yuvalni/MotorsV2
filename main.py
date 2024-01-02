@@ -39,7 +39,7 @@ PosLog.setLevel(logging.DEBUG)
 PosLog.setFormatter(formatter)
 Poslogger.addHandler(PosLog)
 
-        
+
 def create_Hseperator():
     seperator = QtWidgets.QFrame()
     seperator.setFrameShape(QtWidgets.QFrame.HLine)
@@ -111,7 +111,7 @@ class MainWindow(QtWidgets.QMainWindow):
         verticalSpacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         Button_Grid_layout.addItem(verticalSpacer)
 
-        
+
         LED_form = QtWidgets.QFormLayout()
         self.manipulatorStopdMoving_LED = QtWidgets.QCheckBox()
         self.manipulatorStopdMoving_LED.setChecked(True)
@@ -135,9 +135,9 @@ class MainWindow(QtWidgets.QMainWindow):
                                                                         "}")
         LED_form.addRow("Movement Done ",self.manipulatorStopdMoving_LED)
         LED_form.setHorizontalSpacing(4)
-        
 
-        
+
+
         self.SESConnected = QtWidgets.QCheckBox()
         self.SESConnected.setTristate(True)
         self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
@@ -178,9 +178,9 @@ class MainWindow(QtWidgets.QMainWindow):
                                                                         "    border:                 2px solid black;\n"
                                                                         "}")
         LED_form.addRow("SES connection",self.SESConnected)
-        
+
         Button_Grid_layout.addItem(LED_form)
-        
+
 
 
         Stop_Btn = QtWidgets.QPushButton(U"🛑")
@@ -222,17 +222,17 @@ class MainWindow(QtWidgets.QMainWindow):
         #self.axis["θ"] = Paxis
         self.axis["R"] = Paxis
         return Axis_Grid_layout
-    
+
     def createLayout(self):
         layout = QtWidgets.QHBoxLayout()
         Axis_Grid_layout = self.CreateAxisLayout()
-        
+
         layout.addLayout(Axis_Grid_layout)
         layout.addWidget(create_Vseperator())
         buttonPanel = self.CreateButtonPanel()
         layout.addLayout(buttonPanel)
         return layout
-    
+
 
     def __init__(self,*args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -240,6 +240,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.threadpool = QtCore.QThreadPool()
         #locks:
         self.update_loop = threading.Event()
+        self.serial_in_use = threading.Lock()
         self.serial_up = threading.Lock()
         self.stoped = threading.Event()
 
@@ -268,14 +269,16 @@ class MainWindow(QtWidgets.QMainWindow):
     def set_step(self, ax, step):
         self.step_sizes[ax] = step
         if ax in self.motors.axes:
+            self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
             self.motors.step[ax] = step
-    
+            self.serial_in_use.release()
+
     @QtCore.Slot(bool)
     def set_safeMode(self,mode):
         logger.info('Safe mode on: {}'.format(mode))
         self.safeMode = mode
-        
-    
+
+
     @QtCore.Slot(float)
     def go_to_pos(self,ax,pos):
         #logger.info('{} sent to: {}. position: {}.'.format(ax, pos, positions[ax]))
@@ -287,13 +290,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.moving = True
         self.set_positions[ax] = float(pos)
         if ax in self.motors.axes:
+            self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
             self.motors.go_to_pos(ax, float(pos))
+            self.serial_in_use.release()
 
         self.stoped.clear() #initiated a new movement
         #eel.set_gui_moving(True)
         self.manipulatorStopdMoving_LED.setChecked(False)
         self.threadpool.start(self.check_movement)
-        
+
 
 
     def moveStep(self,ax,direction):
@@ -303,22 +308,26 @@ class MainWindow(QtWidgets.QMainWindow):
                 logger.info('{} Out of range:{} of {} '.format(ax, self.positions[ax] + direction * self.step_sizes[ax], self.allowd_range[ax]))
                 return False
         if ax in self.motors.axes:
+            self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
             self.motors.go_step(ax, direction)
+            self.serial_in_use.release()
 
     def stop(self):
         self.motors.stop()
         self.stoped.set()
-        
+
 
     def updateLoop(self):
         self.serial_up.acquire(blocking=False) #Do not close serial!
         last_update = time()
         while self.update_loop.is_set():
+            self.serial_in_use.acquire(blocking=True, timeout=2) #this will wait for serial to clear (at most 2sec)
             for ax in self.motors.axes:
                 pos = self.motors.get_pos(ax)
                 if pos != 'Not Connected':
                     self.positions[ax] = float(pos)
                     self.axis[ax].setPosition(float(pos))
+            self.serial_in_use.release()
             SESapi.pos = self.positions #this needs to speak the same language with API!
             if self.moving:
                 SESapi.status = SES_API.ManipulatorStatus.MOVING
@@ -333,7 +342,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.serial_up.release() #Now you can close the serial connection
 
 
-        
+
     def check_movement(self):
         while True:
             flag = True
@@ -359,13 +368,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def redefineMotorPosition(self,ax,pos):
         print(ax,pos)
+
         realPos = self.motors.set_pos(ax, float(pos))
         logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(realPos)))
 
     def changeLimits(self,ax,low,high):
         logger.info('Set limit of {0} from ({1},{2})to: ({3},{4})'.format(ax,self.allowd_range[ax][0],self.allowd_range[ax][1], low,high))
         self.allowd_range[ax] = (low,high)
-        
+
     def closeWindowCallback(self,SESapi):
         logger.info("closing motor connection.")
         self.update_loop.clear() # now update loop is shutting down
@@ -373,6 +383,7 @@ class MainWindow(QtWidgets.QMainWindow):
         sleep(3)
         self.serial_up.acquire(blocking=True,timeout=15)
         self.motors.close()
+        self.serial_up.release()
 
     def startUpdateLoop(self):
         self.update_loop.set()
@@ -393,7 +404,7 @@ class MainWindow(QtWidgets.QMainWindow):
         logger.info('Polar Lock on: {}'.format(state))
         self.PolarLock = state
 
-        
+
     def SESmove(self,axis,pos):
         assert axis == "R"
         pos = float(pos)
@@ -436,8 +447,8 @@ class MainWindow(QtWidgets.QMainWindow):
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
-    
-    window.show() 
+
+    window.show()
     window.startUpdateLoop()
     SESapi = SES_API()
     SESapi.ConnectionStatusChanged.connect(lambda state: window.ChangeConnectionLED(state))
