@@ -440,6 +440,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.set_point("R",_P)
 
     def keyPressEvent(self,event):
+        if event.key() == Qt.Key.Key_Enter or event.key() == Qt.Key.Key_Return:
+            pass
+            #print(app.focusWidget().text)
         if event.key() == Qt.Key.Key_Escape:
             self.stop()
 
