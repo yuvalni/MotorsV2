@@ -21,7 +21,7 @@ class SES_API(QObject):
 
     ConnectionStatusChanged = Signal(object)
     Stop = Signal()
-    moveTo = Signal(str,float)
+    moveTo = Signal(float)
     
     def __init__(self):
         super(SES_API,self).__init__()
@@ -41,9 +41,10 @@ class SES_API(QObject):
     def move(self,data):
         self.status = self.ManipulatorStatus.MOVING
         m = self.move_reg.findall(data)
+        print(m)
         if m:
             axis, pos  = m[0][0] , m[0][1]
-            self.moveTo.emit(axis,pos)
+            self.moveTo.emit(float(pos))
             print(axis,pos)
         else:
             print("no axis found.")

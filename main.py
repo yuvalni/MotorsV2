@@ -281,6 +281,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot(float)
     def go_to_pos(self,ax,pos):
+        print("go to func")
+        print(ax,pos)
         #logger.info('{} sent to: {}. position: {}.'.format(ax, pos, positions[ax]))
         if self.safeMode:
             if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
@@ -406,38 +408,43 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def SESmove(self,axis,pos):
+        print("in SES")
+        print(axis,pos)
         assert axis == "R"
         pos = float(pos)
         #this will be called by the SES API to move an axis- probably the polar
+        print(self.PolarLock)
+        print(self.polar_vec)
         if not self.PolarLock:
-            self.set_point(axis, pos)
+            self.go_to_pos(axis, pos)
             return True
         else:
             #check if there is a polar data in current location,
-            if pos in polar_vec:
-                idx = polar_vec.index(pos)
-                _x = x_vec[idx]
-                _y = y_vec[idx]
-                _P = polar_vec[idx]
+            if pos in self.polar_vec:
+                idx = self.polar_vec.index(pos)
+                _x = self.x_vec[idx]
+                _y = self.y_vec[idx]
+                _P = self.polar_vec[idx]
 
             else:
-                if((pos>max(polar_vec))or(pos<min(polar_vec))):
+                if((pos>max(self.polar_vec))or(pos<min(self.polar_vec))):
                     print("polar out of range.")
                     return False
                 #if not, interpolat between nearest points.
-                p_array = np.array(polar_vec)
-                x_array = np.array(x_vec)
-                y_array = np.array(y_vec)
+                p_array = np.array(self.polar_vec)
+                x_array = np.array(self.x_vec)
+                y_array = np.array(self.y_vec)
                 idx_sorted = p_array.argsort()
 
                 _x = np.interp(pos, p_array[idx_sorted], x_array[idx_sorted], left=None, right=None, period=None)
                 _y = np.interp(pos, p_array[idx_sorted], y_array[idx_sorted], left=None, right=None, period=None)
                 _P = pos
 
-
-            self.set_point("X", _x)
-            self.set_point("Y", _y)
-            self.set_point("R",_P)
+            print("moving")
+            print(_x,_y,_P)
+            self.go_to_pos("X", _x)
+            self.go_to_pos("Y", _y)
+            self.go_to_pos("R",_P)
 
     def keyPressEvent(self,event):
         if event.key() == Qt.Key.Key_Enter or event.key() == Qt.Key.Key_Return:
@@ -456,7 +463,7 @@ if __name__=="__main__":
     SESapi = SES_API()
     SESapi.ConnectionStatusChanged.connect(lambda state: window.ChangeConnectionLED(state))
     SESapi.Stop.connect(window.stop)
-    SESapi.moveTo.connect(lambda ax,pos: window.SESmove(ax,pos))
+    SESapi.moveTo.connect(lambda _pos: window.SESmove("R",_pos))
     window.threadpool.start(SESapi.handle_connection)
 
     app.aboutToQuit.connect(lambda: window.closeWindowCallback(SESapi))
