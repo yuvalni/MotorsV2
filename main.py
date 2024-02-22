@@ -5,7 +5,7 @@ from AxisWidget.AxisWidget import AxisWidget
 from settingsWidget.settingsWindow import SettingsWindow
 from TrackingWindow.TrackingWindow import TrackingWindow
 from MotorsClass.mdrive import Motor
-from time import sleep
+from time import sleep, time
 import threading
 from SESInterface.SESInterface import SES_API
 import numpy as np
@@ -346,11 +346,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def check_movement(self):
+        loop_start_time = time()
         while True:
             flag = True
             for ax in self.set_positions.keys():
-                if round(self.set_positions[ax],3) != round(self.positions[ax],3):
+                if round(self.set_positions[ax],2) != round(self.positions[ax],2): #changed from 3 to 2, 2 is enough.
                     flag = False
+
+            if time() - loop_start_time > 15:   #if we wait more then 15 seconds (!) just assume we have arrived.
+                flag = True
+
             if flag:
                 self.moving = False
                 self.manipulatorStopdMoving_LED.setChecked(True)
