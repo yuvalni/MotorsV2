@@ -260,7 +260,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.positions = dict()
         self.positions = {"X":0.0,"Y":0.0,"Z":0.0,"R":0.0}
         self.set_positions = dict() # this is the set positions... rather then the actual positions...
-        self.allowd_range = {'X': (-10, 1), 'Y': (-9, 10), 'Z': ( -140,0), 'R': (-30, 15), 'P': (70, 200),
+        self.allowd_range = {'X': (-10, 4), 'Y': (-9, 10), 'Z': ( -140,0), 'R': (-30, 15), 'P': (70, 200),
                         'T': (-400, 400)}  # this needs to be refined.
         self.step_sizes = {**self.motors.step}
         self.safeMode = True
