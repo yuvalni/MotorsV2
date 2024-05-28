@@ -22,7 +22,7 @@ class Motor(object):
         self.step = dict()
         self.step["X"] = 0.1
         self.step["Y"] = 0.1
-        self.step["R"] = 0.5
+        self.step["R"] = 1.0
         self.step["Z"] = 0.1
         self.connected = False
 
