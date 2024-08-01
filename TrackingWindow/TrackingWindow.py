@@ -2,7 +2,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 import sys
 import pyqtgraph as pg
-
+import pickle
 
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
@@ -79,11 +79,13 @@ class TrackingWindow(QtWidgets.QWidget):
         saveLoad_layout = QtWidgets.QHBoxLayout()
         VerticalLayout.addLayout(saveLoad_layout)
         load_list_Btn = QtWidgets.QPushButton("Load list")
-        load_list_Btn.setDisabled(True)
+        #load_list_Btn.setDisabled(True)
+        load_list_Btn.clicked.connect(self.loadList)
         saveLoad_layout.addWidget(load_list_Btn)
 
         save_list_Btn = QtWidgets.QPushButton("Save list")
-        save_list_Btn.setDisabled(True)
+        #save_list_Btn.setDisabled(True)
+        save_list_Btn.clicked.connect(self.saveList)
 
         saveLoad_layout.addWidget(save_list_Btn)
         addCurrentPos_Btn = QtWidgets.QPushButton("Add current position")
@@ -158,6 +160,22 @@ class TrackingWindow(QtWidgets.QWidget):
         QtWidgets.QListWidgetItem("({0},{1},{2})".format(self.pos[0],self.pos[1],self.pos[2]),self.pointList)
         self.pointList.sortItems()
 
+    def saveList(self):
+        file_name, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save List", "", "Pickle Files (*.pkl);;All Files (*)")
+        if file_name:
+            with open(file_name, 'wb') as f:
+                pickle.dump((self.P_vec, self.X_vec, self.Y_vec), f)
+
+    def loadList(self):
+        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Load List", "", "Pickle Files (*.pkl);;All Files (*)")
+        if file_name:
+            with open(file_name, 'rb') as f:
+                self.P_vec, self.X_vec, self.Y_vec = pickle.load(f)
+            self.Xplot.setData(self.P_vec, self.X_vec)
+            self.Yplot.setData(self.P_vec, self.Y_vec)
+            self.pointList.clear()
+            self.loadVecToList()
+            self.VecsUpdated.emit(self.P_vec, self.X_vec, self.Y_vec)
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
