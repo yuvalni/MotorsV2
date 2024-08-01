@@ -16,17 +16,17 @@ class TrackingWindow(QtWidgets.QWidget):
         self.X_vec = X_vec
         self.Y_vec = Y_vec
         widget = QtWidgets.QWidget()
-        
+
         HorizontalLayout = QtWidgets.QHBoxLayout()
         widget.setLayout(HorizontalLayout)
         plotWidget = pg.PlotWidget(widget)
-        
-        
+
+
 
         double_validator = QtGui.QDoubleValidator()
         #widget.setSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum,QtWidgets.QSizePolicy.Policy.MinimumExpanding)
         plotItem = plotWidget.getPlotItem()
-        
+
 
         HorizontalLayout.addWidget(plotWidget,stretch=20)
 
@@ -36,10 +36,10 @@ class TrackingWindow(QtWidgets.QWidget):
         #self.pointList.setFixedWidth(100)
         #QtWidgets.QListWidgetItem("(1,2,3)",self.pointList)
         VerticalLayout.addWidget(self.pointList)
-        
+
         if len(self.P_vec) == 0:
-            self.Xplot = plotItem.plot(pen=None,symbol='o',symbolBrush=(0,0,200))    
-            self.Yplot = plotItem.plot(pen=None,symbol='o',symbolBrush=(255,140,0))    
+            self.Xplot = plotItem.plot(pen=None,symbol='o',symbolBrush=(0,0,200))
+            self.Yplot = plotItem.plot(pen=None,symbol='o',symbolBrush=(255,140,0))
         else:
             self.Xplot = plotItem.plot(self.P_vec,self.X_vec,pen=None,symbol='o',symbolBrush=(0,0,200))
             self.Yplot = plotItem.plot(self.P_vec,self.Y_vec,pen=None,symbol='o',symbolBrush=(255,140,0))
@@ -48,7 +48,7 @@ class TrackingWindow(QtWidgets.QWidget):
         #self.Ylocation = plotItem.plot(pen=None,symbol='+',symbolBrush=(255,140,0))
         SetNewPoint_group = QtWidgets.QGroupBox("New Point")
         #SetNewPoint_group.setStyleSheet("QGroupBox{font: 24px;}")
-        SetNewPoint_grid = QtWidgets.QGridLayout() 
+        SetNewPoint_grid = QtWidgets.QGridLayout()
         SetNewPoint_group.setLayout(SetNewPoint_grid)
         self.SetNewPoint_P = QtWidgets.QLineEdit()
         self.SetNewPoint_X = QtWidgets.QLineEdit()
@@ -74,17 +74,17 @@ class TrackingWindow(QtWidgets.QWidget):
         #DelPoint_Btn.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum,QtWidgets.QSizePolicy.Policy.Fixed)
         DelPoint_Btn.clicked.connect(self.DelPoint)
         VerticalLayout.addWidget(DelPoint_Btn)
-        
+
         VerticalLayout.addWidget(SetNewPoint_group)
         saveLoad_layout = QtWidgets.QHBoxLayout()
         VerticalLayout.addLayout(saveLoad_layout)
         load_list_Btn = QtWidgets.QPushButton("Load list")
         load_list_Btn.setDisabled(True)
         saveLoad_layout.addWidget(load_list_Btn)
-        
+
         save_list_Btn = QtWidgets.QPushButton("Save list")
         save_list_Btn.setDisabled(True)
-        
+
         saveLoad_layout.addWidget(save_list_Btn)
         addCurrentPos_Btn = QtWidgets.QPushButton("Add current position")
         addCurrentPos_Btn.clicked.connect(self.addCurrentPosition)
@@ -134,13 +134,13 @@ class TrackingWindow(QtWidgets.QWidget):
         self.Yplot.setData(self.P_vec,self.Y_vec)
 
         self.VecsUpdated.emit(self.P_vec,self.X_vec,self.Y_vec)
-    
+
     @QtCore.Slot(float,float,float)
     def update_current_position(self,p,x,y):
         self.pos = (p,x,y)
         #self.Xlocation.setData([p],[x])
         #self.Ylocation.setData([p],[y])
-    
+
     def addCurrentPosition(self):
         if self.pos[0] in self.P_vec:
             index = self.P_vec.index(self.pos[0])
