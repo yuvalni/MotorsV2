@@ -61,7 +61,6 @@ class SES_API(QObject):
     def send_pos(self,data):
          #axis = self.pos_reg.search(data.decode("UTF-8")).group(0)
          axis = data.replace("?","")
-         print('sending pos')
 
          #Currently we do not implement T and phi
          if "T" in axis:
@@ -73,7 +72,6 @@ class SES_API(QObject):
              win32file.WriteFile(self.pipe, response.encode())
              return True
          response = "{}\n".format(self.pos[axis])
-         print(response)
          win32file.WriteFile(self.pipe, response.encode())    
         
 
@@ -96,6 +94,8 @@ class SES_API(QObject):
     @Slot()
     def closeLoop(self):
         print("closing SES loop.")
+        self.status =  self.ManipulatorStatus.DONE
+        self.send_status()
         self.run = False
 
     def handle_connection(self):#this is main loop.
@@ -146,4 +146,6 @@ class SES_API(QObject):
 
 
             sleep(0.1)
+        self.status =  self.ManipulatorStatus.DONE
+        self.send_status()
         win32file.CloseHandle(self.pipe)
