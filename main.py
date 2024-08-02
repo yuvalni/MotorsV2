@@ -4,7 +4,7 @@ import sys
 from AxisWidget.AxisWidget import AxisWidget
 from settingsWidget.settingsWindow import SettingsWindow
 from TrackingWindow.TrackingWindow import TrackingWindow
-from MotorsClass.mdrive import Motor
+from MotorsClass.mdrive_MOCK import Motor
 from time import sleep
 import threading
 from SESInterface.SESInterface import SES_API
