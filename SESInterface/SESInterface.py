@@ -61,7 +61,7 @@ class SES_API(QObject):
     def send_pos(self,data):
          #axis = self.pos_reg.search(data.decode("UTF-8")).group(0)
          axis = data.replace("?","")
-         #print('sending pos')
+         print('sending pos')
 
          #Currently we do not implement T and phi
          if "T" in axis:
@@ -73,6 +73,7 @@ class SES_API(QObject):
              win32file.WriteFile(self.pipe, response.encode())
              return True
          response = "{}\n".format(self.pos[axis])
+         print(response)
          win32file.WriteFile(self.pipe, response.encode())    
         
 
@@ -110,9 +111,10 @@ class SES_API(QObject):
             while self.run:
                 try:
                     # Read data from the pipe
-                    result, data = win32file.ReadFile(pipe, 64 * 1024)
-                    print("Received:", data.decode())
-                    data = data.decode().strip()
+                    #print("waiting for data.")
+                    result, data = win32file.ReadFile(self.pipe, 64 * 1024)
+                    #print("Received:", data.decode())
+                    
 
                     if data == b'':
 
@@ -144,3 +146,4 @@ class SES_API(QObject):
 
 
             sleep(0.1)
+        win32file.CloseHandle(self.pipe)
