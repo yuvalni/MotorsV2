@@ -1,11 +1,13 @@
 from enum import Enum
-import socket
+
 import re
 from select import select
 from time import sleep
 from PySide6.QtCore import Signal,QObject,Slot
 
+import win32pipe, win32file, pywintypes
 
+pipe_name = r'\\.\pipe\manipulatorPipe'
 
 class SES_API(QObject):
     class ManipulatorStatus(Enum):
@@ -23,13 +25,20 @@ class SES_API(QObject):
     Stop = Signal()
     moveTo = Signal(float)
     
+
     def __init__(self):
         super(SES_API,self).__init__()
         self.run = True
-        self.HOST = "127.0.0.1" 
-        self.PORT = 5011  # Port to listen on
+        
+        self.pipe = win32pipe.CreateNamedPipe(
+            pipe_name,
+            win32pipe.PIPE_ACCESS_DUPLEX,
+            win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT,
+            1, 65536, 65536,
+            0,
+            None
+        )
         self.status =  self.ManipulatorStatus.DONE
-        self.conn = None
         self.pos = {"R":0.0,"T":0.0,"P":0.0,"X":0.0,"Y":0.0,"Z":0.0}
         self.move_reg = re.compile('(X|Y|Z|R|T|P)([+-]?([0-9]*[.])?[0-9]+)') #capturing X or Y or Z and float number
         self.pos_reg = re.compile('(X|Y|Z|R|T|P)(\?)') #capturing X or Y or Z and float number
@@ -56,13 +65,16 @@ class SES_API(QObject):
 
          #Currently we do not implement T and phi
          if "T" in axis:
-             self.conn.send("0.0\n".encode())
-             return True
+            response = "0.0\n"
+            win32file.WriteFile(self.pipe, response.encode())
+            return True
          if "P" in axis:
-             self.conn.send("0.0\n".encode())
+             response = "0.0\n"
+             win32file.WriteFile(self.pipe, response.encode())
              return True
-
-         self.conn.send("{}\n".format(self.pos[axis]).encode())
+         response = "{}\n".format(self.pos[axis])
+         win32file.WriteFile(self.pipe, response.encode())    
+        
 
     def stop(self):
         print('stoping')
@@ -70,7 +82,8 @@ class SES_API(QObject):
 
     def send_status(self):
         print('send status',self.status)
-        self.conn.send("{}\n".format(self.status.value).encode())
+        response = "{}\n".format(self.status.value)
+        win32file.WriteFile(self.pipe, response.encode())
 
     def handle_req(self,data):
         #print(data)
@@ -87,67 +100,47 @@ class SES_API(QObject):
     def handle_connection(self):#this is main loop.
         print(self.ConnectionStatus.Connected)
         self.ConnectionStatusChanged.emit(self.ConnectionStatus.Error)
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setblocking(True)
-            s.settimeout(0.01)
-            s.bind((self.HOST, self.PORT))
-            s.listen()
 
+        while self.run:
+            print("listening")
+            self.listening = True
+            self.ConnectionStatusChanged.emit(self.ConnectionStatus.Listening)
+            win32pipe.ConnectNamedPipe(self.pipe, None)
+            self.ConnectionStatusChanged.emit(self.ConnectionStatus.Connected)
             while self.run:
-                print("listening")
-                self.listening = True
-                self.ConnectionStatusChanged.emit(self.ConnectionStatus.Listening)
-                read,write,_ = select([s],[s],[],0.01)
-                while((not read) and self.run):
-                    #waiting for connection without blocking
-                    #This works good
-                    read, write, _ = select([s], [s], [],0)
-                    sleep(0.1)
+                try:
+                    # Read data from the pipe
+                    result, data = win32file.ReadFile(pipe, 64 * 1024)
+                    print("Received:", data.decode())
+                    data = data.decode().strip()
 
-                self.conn, addr = s.accept()
-                self.conn.settimeout(0.1)
-                with self.conn:
-                    self.ConnectionStatusChanged.emit(self.ConnectionStatus.Connected)
-                    self.listening = False
-                    self.connected = True
-                    print("Connected by {}".format(addr))
-
-                    while self.connected and self.run:
-                        #we are stuck here!
-
-                        try:
-                            data = self.conn.recv(512)
-
-                        except socket.timeout as e:
-                            #print(e)
-                            #print("non blocking")
-                            sleep(0.1)
-                            continue
-
-                        if data == b'':
-
-                            sleep(0.01)
-                            continue
-
-                        for data in data.decode("UTF-8").split('\n'):
-
-                            if("?" in data):
-                                self.handle_req(data) #Handle data request
-                            elif "MOV" in data: #MOVX5.0 for example
-                                self.move(data) #handle move request
-                            elif "STOP" in data:
-                                self.stop()
-                            else:
-                                if data!=r"\n":
-                                    #print(data) # anything else please?
-                                    pass
-
-                            if data=="exit":
-                                # closing connection, but awaiting another one...
-                                self.connected = False
-                                break
+                    if data == b'':
 
                         sleep(0.01)
+                        continue
+
+                    for data in data.decode("UTF-8").split('\n'):
+
+                        if("?" in data):
+                            self.handle_req(data) #Handle data request
+                        elif "MOV" in data: #MOVX5.0 for example
+                            self.move(data) #handle move request
+                        elif "STOP" in data:
+                            self.stop()
+                        else:
+                            if data!=r"\n":
+                                #print(data) # anything else please?
+                                pass
+
+                        if data == "exit":
+                            # closing connection, but awaiting another one...
+                            self.connected = False
+                            break
+                except pywintypes.error as e:
+                    if e.winerror == 109:  # ERROR_BROKEN_PIPE
+                        print("Client disconnected")
+                        break
+                sleep(0.01)
 
 
-                sleep(0.1)
+            sleep(0.1)
