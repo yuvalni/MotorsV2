@@ -4,8 +4,11 @@ import sys
 from AxisWidget.AxisWidget import AxisWidget
 from settingsWidget.settingsWindow import SettingsWindow
 from TrackingWindow.TrackingWindow import TrackingWindow
+
 from MotorsClass.mdrive_MOCK import Motor
-from time import sleep
+
+from time import sleep, time
+
 import threading
 from SESInterface.SESInterface import SES_API
 import numpy as np
@@ -39,7 +42,7 @@ PosLog.setLevel(logging.DEBUG)
 PosLog.setFormatter(formatter)
 Poslogger.addHandler(PosLog)
 
-        
+
 def create_Hseperator():
     seperator = QtWidgets.QFrame()
     seperator.setFrameShape(QtWidgets.QFrame.HLine)
@@ -100,10 +103,18 @@ class MainWindow(QtWidgets.QMainWindow):
         #SafeMode_Btn.toggled.connect()  This will pass True/False if btn is checked or not.
         Button_Grid_layout.addWidget(SafeMode_Btn)
 
+        PolarLock_Btn = QtWidgets.QPushButton(U"🔒")
+        PolarLock_Btn.setStyleSheet("QPushButton { font: 40px; }")
+        PolarLock_Btn.setToolTip("Safe Mode")
+        PolarLock_Btn.setCheckable(True)
+        PolarLock_Btn.setChecked(False)
+        PolarLock_Btn.toggled.connect(self.togglePolarLock)
+        Button_Grid_layout.addWidget(PolarLock_Btn)
+
         verticalSpacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         Button_Grid_layout.addItem(verticalSpacer)
 
-        
+
         LED_form = QtWidgets.QFormLayout()
         self.manipulatorStopdMoving_LED = QtWidgets.QCheckBox()
         self.manipulatorStopdMoving_LED.setChecked(True)
@@ -127,12 +138,13 @@ class MainWindow(QtWidgets.QMainWindow):
                                                                         "}")
         LED_form.addRow("Movement Done ",self.manipulatorStopdMoving_LED)
         LED_form.setHorizontalSpacing(4)
-        
 
-        
+
+
         self.SESConnected = QtWidgets.QCheckBox()
         self.SESConnected.setTristate(True)
         self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
+        self.SESConnected.setEnabled(False)
         self.SESConnected.setStyleSheet(u"QCheckBox::indicator {\n"
                                                                         "    width:                  20px;\n"
                                                                         "    height:                 20px;\n"
@@ -147,15 +159,31 @@ class MainWindow(QtWidgets.QMainWindow):
                                                                         "QCheckBox::indicator:unchecked {\n"
                                                                         "    background-color:       rgb(255, 0, 0);\n"
                                                                         "    border:                 2px solid black;\n"
-                                                                        "}"
+                                                                        "}\n"
+                                                                        "\n"
                                                                         "QCheckBox::indicator:partiallychecked {\n"
                                                                         "    background-color:       rgb(255, 255, 0);\n"
                                                                         "    border:                 2px solid black;\n"
                                                                         "}")
+        self.SESConnected.setStyleSheet(u"QCheckBox::indicator {\n"
+                                                                        "    width:                  20px;\n"
+                                                                        "    height:                 20px;\n"
+                                                                        "    border-radius:          5px;\n"
+                                                                        "}\n"
+                                                                        "\n"
+                                                                        "QCheckBox::indicator:checked {\n"
+                                                                        "    background-color:       rgb(85, 255, 0);\n"
+                                                                        "    border:                 2px solid black;\n"
+                                                                        "}\n"
+                                                                        "\n"
+                                                                        "QCheckBox::indicator:unchecked {\n"
+                                                                        "    background-color:       rgb(255, 0, 0);\n"
+                                                                        "    border:                 2px solid black;\n"
+                                                                        "}")
         LED_form.addRow("SES connection",self.SESConnected)
-        
+
         Button_Grid_layout.addItem(LED_form)
-        
+
 
 
         Stop_Btn = QtWidgets.QPushButton(U"🛑")
@@ -197,17 +225,17 @@ class MainWindow(QtWidgets.QMainWindow):
         #self.axis["θ"] = Paxis
         self.axis["R"] = Paxis
         return Axis_Grid_layout
-    
+
     def createLayout(self):
         layout = QtWidgets.QHBoxLayout()
         Axis_Grid_layout = self.CreateAxisLayout()
-        
+
         layout.addLayout(Axis_Grid_layout)
         layout.addWidget(create_Vseperator())
         buttonPanel = self.CreateButtonPanel()
         layout.addLayout(buttonPanel)
         return layout
-    
+
 
     def __init__(self,*args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -215,6 +243,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.threadpool = QtCore.QThreadPool()
         #locks:
         self.update_loop = threading.Event()
+        self.serial_in_use = threading.Lock()
         self.serial_up = threading.Lock()
         self.stoped = threading.Event()
 
@@ -234,7 +263,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.positions = dict()
         self.positions = {"X":0.0,"Y":0.0,"Z":0.0,"R":0.0}
         self.set_positions = dict() # this is the set positions... rather then the actual positions...
-        self.allowd_range = {'X': (-10, 1), 'Y': (-9, 10), 'Z': ( -140,0), 'R': (-30, 15), 'P': (70, 200),
+        self.allowd_range = {'X': (-10, 4), 'Y': (-9, 10), 'Z': ( -140,0), 'R': (-30, 15), 'P': (70, 200),
                         'T': (-400, 400)}  # this needs to be refined.
         self.step_sizes = {**self.motors.step}
         self.safeMode = True
@@ -243,16 +272,20 @@ class MainWindow(QtWidgets.QMainWindow):
     def set_step(self, ax, step):
         self.step_sizes[ax] = step
         if ax in self.motors.axes:
+            self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
             self.motors.step[ax] = step
-    
+            self.serial_in_use.release()
+
     @QtCore.Slot(bool)
     def set_safeMode(self,mode):
         logger.info('Safe mode on: {}'.format(mode))
         self.safeMode = mode
-        
-    
+
+
     @QtCore.Slot(float)
     def go_to_pos(self,ax,pos):
+        print("go to func")
+        print(ax,pos)
         #logger.info('{} sent to: {}. position: {}.'.format(ax, pos, positions[ax]))
         if self.safeMode:
             if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
@@ -262,13 +295,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.moving = True
         self.set_positions[ax] = float(pos)
         if ax in self.motors.axes:
+            self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
             self.motors.go_to_pos(ax, float(pos))
+            self.serial_in_use.release()
 
         self.stoped.clear() #initiated a new movement
         #eel.set_gui_moving(True)
         self.manipulatorStopdMoving_LED.setChecked(False)
         self.threadpool.start(self.check_movement)
-        
+
 
 
     def moveStep(self,ax,direction):
@@ -278,22 +313,26 @@ class MainWindow(QtWidgets.QMainWindow):
                 logger.info('{} Out of range:{} of {} '.format(ax, self.positions[ax] + direction * self.step_sizes[ax], self.allowd_range[ax]))
                 return False
         if ax in self.motors.axes:
+            self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
             self.motors.go_step(ax, direction)
+            self.serial_in_use.release()
 
     def stop(self):
         self.motors.stop()
         self.stoped.set()
-        
+
 
     def updateLoop(self):
         self.serial_up.acquire(blocking=False) #Do not close serial!
         last_update = time()
         while self.update_loop.is_set():
+            self.serial_in_use.acquire(blocking=True, timeout=2) #this will wait for serial to clear (at most 2sec)
             for ax in self.motors.axes:
                 pos = self.motors.get_pos(ax)
                 if pos != 'Not Connected':
                     self.positions[ax] = float(pos)
                     self.axis[ax].setPosition(float(pos))
+            self.serial_in_use.release()
             SESapi.pos = self.positions #this needs to speak the same language with API!
             if self.moving:
                 SESapi.status = SES_API.ManipulatorStatus.MOVING
@@ -301,20 +340,25 @@ class MainWindow(QtWidgets.QMainWindow):
                 SESapi.status = SES_API.ManipulatorStatus.DONE
             if self.Tracking_window is not None:
                 if self.Tracking_window.isVisible():
-                    if time()-last_update > 0.2:
+                    if time()-last_update > 1:
                         last_update = time()
                         self.Tracking_window.update_current_position(self.positions["R"],self.positions["X"],self.positions["Y"])
             sleep(0.05)
         self.serial_up.release() #Now you can close the serial connection
 
 
-        
+
     def check_movement(self):
+        loop_start_time = time()
         while True:
             flag = True
             for ax in self.set_positions.keys():
-                if round(self.set_positions[ax],3) != round(self.positions[ax],3):
+                if round(self.set_positions[ax],2) != round(self.positions[ax],2): #changed from 3 to 2, 2 is enough.
                     flag = False
+
+            if time() - loop_start_time > 15:   #if we wait more then 15 seconds (!) just assume we have arrived.
+                flag = True
+
             if flag:
                 self.moving = False
                 self.manipulatorStopdMoving_LED.setChecked(True)
@@ -334,13 +378,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def redefineMotorPosition(self,ax,pos):
         print(ax,pos)
+
         realPos = self.motors.set_pos(ax, float(pos))
         logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(realPos)))
 
     def changeLimits(self,ax,low,high):
         logger.info('Set limit of {0} from ({1},{2})to: ({3},{4})'.format(ax,self.allowd_range[ax][0],self.allowd_range[ax][1], low,high))
         self.allowd_range[ax] = (low,high)
-        
+
     def closeWindowCallback(self,SESapi):
         logger.info("closing motor connection.")
         self.update_loop.clear() # now update loop is shutting down
@@ -348,6 +393,7 @@ class MainWindow(QtWidgets.QMainWindow):
         sleep(3)
         self.serial_up.acquire(blocking=True,timeout=15)
         self.motors.close()
+        self.serial_up.release()
 
     def startUpdateLoop(self):
         self.update_loop.set()
@@ -363,46 +409,55 @@ class MainWindow(QtWidgets.QMainWindow):
         if state == SES_API.ConnectionStatus.Error:
             self.SESConnected.setCheckState(Qt.CheckState.Unchecked)
 
-    def togglePolarLock(self):
-        self.PolarLock = not self.PolarLock
-        print(self.PolarLock)
+    @QtCore.Slot(bool)
+    def togglePolarLock(self,state):
+        logger.info('Polar Lock on: {}'.format(state))
+        self.PolarLock = state
 
-        
+
     def SESmove(self,axis,pos):
+        print("in SES")
+        print(axis,pos)
         assert axis == "R"
         pos = float(pos)
         #this will be called by the SES API to move an axis- probably the polar
+        print(self.PolarLock)
+        print(self.polar_vec)
         if not self.PolarLock:
-            self.set_point(axis, pos)
+            self.go_to_pos(axis, pos)
             return True
         else:
             #check if there is a polar data in current location,
-            if pos in polar_vec:
-                idx = polar_vec.index(pos)
-                _x = x_vec[idx]
-                _y = y_vec[idx]
-                _P = polar_vec[idx]
+            if pos in self.polar_vec:
+                idx = self.polar_vec.index(pos)
+                _x = self.x_vec[idx]
+                _y = self.y_vec[idx]
+                _P = self.polar_vec[idx]
 
             else:
-                if((pos>max(polar_vec))or(pos<min(polar_vec))):
+                if((pos>max(self.polar_vec))or(pos<min(self.polar_vec))):
                     print("polar out of range.")
                     return False
                 #if not, interpolat between nearest points.
-                p_array = np.array(polar_vec)
-                x_array = np.array(x_vec)
-                y_array = np.array(y_vec)
+                p_array = np.array(self.polar_vec)
+                x_array = np.array(self.x_vec)
+                y_array = np.array(self.y_vec)
                 idx_sorted = p_array.argsort()
 
                 _x = np.interp(pos, p_array[idx_sorted], x_array[idx_sorted], left=None, right=None, period=None)
                 _y = np.interp(pos, p_array[idx_sorted], y_array[idx_sorted], left=None, right=None, period=None)
                 _P = pos
 
-
-            self.set_point("X", _x)
-            self.set_point("Y", _y)
-            self.set_point("R",_P)
+            print("moving")
+            print(_x,_y,_P)
+            self.go_to_pos("X", _x)
+            self.go_to_pos("Y", _y)
+            self.go_to_pos("R",_P)
 
     def keyPressEvent(self,event):
+        if event.key() == Qt.Key.Key_Enter or event.key() == Qt.Key.Key_Return:
+            pass
+            #print(app.focusWidget().text)
         if event.key() == Qt.Key.Key_Escape:
             self.stop()
 
@@ -410,13 +465,13 @@ class MainWindow(QtWidgets.QMainWindow):
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
-    
-    window.show() 
+
+    window.show()
     window.startUpdateLoop()
     SESapi = SES_API()
     SESapi.ConnectionStatusChanged.connect(lambda state: window.ChangeConnectionLED(state))
     SESapi.Stop.connect(window.stop)
-    SESapi.moveTo.connect(lambda ax,pos: window.SESmove(ax,pos))
+    SESapi.moveTo.connect(lambda _pos: window.SESmove("R",_pos))
     window.threadpool.start(SESapi.handle_connection)
 
     app.aboutToQuit.connect(lambda: window.closeWindowCallback(SESapi))
