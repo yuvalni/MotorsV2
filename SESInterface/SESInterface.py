@@ -69,7 +69,7 @@ class SES_API(QObject):
         self.Stop.emit()
 
     def send_status(self):
-        print('send status',self.status)
+        #print('send status',self.status)
         self.conn.send("{}\n".format(self.status.value).encode())
 
     def handle_req(self,data):
