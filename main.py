@@ -5,8 +5,8 @@ from AxisWidget.AxisWidget import AxisWidget
 from settingsWidget.settingsWindow import SettingsWindow
 from TrackingWindow.TrackingWindow import TrackingWindow
 
-from MotorsClass.mdrive_MOCK import Motor
-
+#from MotorsClass.mdrive_MOCK import Motor
+from MotorsClass.mdrive import Motor
 from time import sleep, time
 
 import threading
