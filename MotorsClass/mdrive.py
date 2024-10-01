@@ -56,7 +56,18 @@ class Motor(object):
 
     def write(self, string):
         # maybe flush line
-        self.ser.write(str.encode(string + chr(10)))
+        #self.ser.write(str.encode(string + chr(10)))
+        try:
+            self.ser.write(str.encode(string + chr(10)))  # Sending string with newline
+            self.ser.flush()  # Ensure data is fully sent
+        except serial.SerialTimeoutException:
+            print("Write operation timed out.")
+            print(string)
+        except serial.SerialException as e:
+            print(f"Serial error: {e}")
+            raise  # Re-raise for unrecoverable issues
+        
+    
 
     def read(self):
         line = self.ser.readline()
