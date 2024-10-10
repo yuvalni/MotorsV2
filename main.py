@@ -364,6 +364,10 @@ class MainWindow(QtWidgets.QMainWindow):
             if flag:
                 self.moving = False
                 self.manipulatorStopdMoving_LED.setChecked(True)
+                if self.Tracking_window is not None:
+                    if self.Tracking_window.isVisible():
+                        self.Tracking_window.update_position_graph(self.positions["R"],self.positions["X"],self.positions["Y"])
+
                 return True
             if self.stoped.is_set():
                 self.stoped.clear()
@@ -374,6 +378,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.set_positions[ax] = self.positions[ax]
                 self.moving = False
                 self.manipulatorStopdMoving_LED.setChecked(True)
+                if self.Tracking_window is not None:
+                    if self.Tracking_window.isVisible():
+                        self.Tracking_window.update_position_graph(self.positions["R"],self.positions["X"],self.positions["Y"])
                 return True
 
             sleep(0.05)
