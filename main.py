@@ -287,9 +287,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot(float)
     def go_to_pos(self,ax,pos):
-        print("go to func")
-        print(ax,pos)
-        #logger.info('{} sent to: {}. position: {}.'.format(ax, pos, positions[ax]))
+        
+        #print(ax,pos)
+        logger.info('{} sent to: {}. position: {}.'.format(ax, pos, positions[ax]))
         if self.safeMode:
             if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
                 logger.info('{} Out of range: {} of {} '.format(ax, pos, self.allowd_range[ax]))
@@ -361,7 +361,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 if round(self.set_positions[ax],2) != round(self.positions[ax],2): #changed from 3 to 2, 2 is enough.
                     flag = False
 
-            if time() - loop_start_time > 30:   #if we wait more then 15 seconds (!) just assume we have arrived.
+            if time() - loop_start_time > 30:   #if we wait more then ... seconds (!) just assume we have arrived.
+                #send notification to signal!
                 flag = True
 
             if flag:
