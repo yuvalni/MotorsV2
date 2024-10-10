@@ -1,9 +1,0 @@
-2024-10-09 14:24:55,263 - main - INFO - Z Out of range:0.046000000000000006 of (-140, 0) 
-2024-10-09 14:24:55,471 - main - INFO - Z Out of range:0.14400000000000002 of (-140, 0) 
-2024-10-09 14:24:55,679 - main - INFO - Z Out of range:0.14600000000000002 of (-140, 0) 
-2024-10-09 14:24:55,903 - main - INFO - Z Out of range:0.14600000000000002 of (-140, 0) 
-2024-10-09 14:24:56,511 - main - INFO - Z Out of range:0.14600000000000002 of (-140, 0) 
-2024-10-09 14:25:08,533 - main - INFO - Set Postion of Z to: -0.5 (internal corr: 100898)
-2024-10-09 14:25:11,902 - main - INFO - Z Out of range:0.079 of (-140, 0) 
-2024-10-09 14:25:12,687 - main - INFO - Z Out of range:0.094 of (-140, 0) 
-2024-10-09 15:19:00,378 - main - INFO - closing motor connection.
