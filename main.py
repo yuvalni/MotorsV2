@@ -63,12 +63,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings_window = SettingsWindow(self.allowd_range,self.positions)
         self.settings_window.limitsChanged.connect(lambda name,h,l: self.changeLimits(name,h,l))
         self.settings_window.PositionIsSet.connect(lambda name,pos: self.redefineMotorPosition(name,pos) )
+        self.settings_window.sendToSignalSet.connect(lambda set: self.sendToSignalSet(set))
         self.settings_window.show()
 
     def show_Tracking_window(self):
         self.Tracking_window = TrackingWindow(self.polar_vec,self.x_vec,self.y_vec)
         self.Tracking_window.VecsUpdated.connect(self.updateVec)
         self.Tracking_window.show()
+
     def updateVec(self,polar_vec,x_vec,y_vec):
         self.polar_vec = polar_vec
         self.x_vec = x_vec
@@ -258,6 +260,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.x_vec = []
         self.y_vec = []
 
+        self.sendToSignal = False
 
         self.motors = Motor()
         self.positions = dict()
@@ -394,6 +397,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def changeLimits(self,ax,low,high):
         logger.info('Set limit of {0} from ({1},{2})to: ({3},{4})'.format(ax,self.allowd_range[ax][0],self.allowd_range[ax][1], low,high))
         self.allowd_range[ax] = (low,high)
+
+    def sendToSignalSet(self,set):
+        self.sendToSignal = set
+        print(set)
 
     def closeWindowCallback(self,SESapi):
         logger.info("closing motor connection.")

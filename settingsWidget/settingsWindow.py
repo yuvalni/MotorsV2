@@ -9,6 +9,7 @@ from settingsWidget.settingsWidget import SettingsWidget
 class SettingsWindow(QtWidgets.QWidget):
     limitsChanged = QtCore.Signal(str,float,float)
     PositionIsSet = QtCore.Signal(str,float)
+    sendToSignalSet = QtCore.Signal(bool)
 
     def __init__(self,allowd_range,positions, *args, **kwargs):
         super(SettingsWindow, self).__init__(*args, **kwargs)
@@ -32,6 +33,12 @@ class SettingsWindow(QtWidgets.QWidget):
         layout.addWidget(ySettings,1,0)
         layout.addWidget(zSettings,0,1)
         layout.addWidget(pSettings,1,1)
+
+        self.sendToSignalCB = QtWidgets.QCheckBox()
+        self.sendToSignalCB.setChecked(False)
+        self.sendToSignalCB.stateChanged.connect(lambda: self.sendToSignalSet.emit(self.sendToSignalCB.isChecked()))
+        layout.addWidget(self.sendToSignalCB)
+        layout.addWidget(QtWidgets.QLabel("send to signal"))
         self.setLayout(layout)
 
 
