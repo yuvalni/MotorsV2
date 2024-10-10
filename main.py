@@ -318,8 +318,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.serial_in_use.release()
 
     def stop(self):
+        self.serial_in_use.acquire(blocking=True, timeout=2)
         self.motors.stop()
         self.stoped.set()
+        self.serial_in_use.release()
 
 
     def updateLoop(self):
@@ -356,7 +358,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 if round(self.set_positions[ax],2) != round(self.positions[ax],2): #changed from 3 to 2, 2 is enough.
                     flag = False
 
-            if time() - loop_start_time > 15:   #if we wait more then 15 seconds (!) just assume we have arrived.
+            if time() - loop_start_time > 30:   #if we wait more then 15 seconds (!) just assume we have arrived.
                 flag = True
 
             if flag:
@@ -416,13 +418,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def SESmove(self,axis,pos):
-        print("in SES")
-        print(axis,pos)
+        #print("in SES")
+        #print(axis,pos)
         assert axis == "R"
         pos = float(pos)
         #this will be called by the SES API to move an axis- probably the polar
-        print(self.PolarLock)
-        print(self.polar_vec)
+        #print(self.PolarLock)
+        #print(self.polar_vec)
         if not self.PolarLock:
             self.go_to_pos(axis, pos)
             return True
