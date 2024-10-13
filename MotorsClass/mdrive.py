@@ -2,6 +2,7 @@ import serial
 from time import sleep
 import re
 import traceback
+from threading import Lock
 
 class Motor(object):
     """class which controls the X,Y,Z,R motors.
@@ -25,7 +26,7 @@ class Motor(object):
         self.step["R"] = 1.0
         self.step["Z"] = 0.1
         self.connected = False
-
+        self.serial_lock = Lock()
         try:
             self.ser = serial.Serial(self.port, timeout=self.timeout)
             self.connected = True
@@ -42,6 +43,7 @@ class Motor(object):
 
     def close(self):
         if self.ser.is_open:
+            self.serial_lock.acquire()
             self.write("XS")
             sleep(30/1000)
             self.write("YS")
@@ -53,6 +55,7 @@ class Motor(object):
             print('serial is closed.')
         else:
             print('serial is already closed.')
+        self.serial_lock.release()
 
     def write(self, string):
         # maybe flush line
@@ -100,22 +103,29 @@ class Motor(object):
         for ax in self.axes:
             self.get_pos(ax)
 
+
     def get_pos(self, axis):
+
         if not self.connected:
             return 'Not Connected'
+
         if axis in self.axes:
+            self.serial_lock.acquire()
             str_pr = '{0}PR P'.format(axis)
             self.write(str_pr)  # ask for axis Position
             sleep(30 / 1000)
             reply = str(self.ser.read_all())
+            self.serial_lock.release()
             if len(re.findall('-?\d{1,}', reply))==0:
                 return 'Not Connected'
             string_pos = re.findall('-?\d{1,}', reply)[0]
             self.pos[axis] = float(string_pos) * self.cr[axis]
             return "{:.3f}".format(self.pos[axis])
+
         return 'No Axes'
 
     def set_pos(self, axis, pos):
+        self.serial_lock.acquire()
         self.ser.flush()
         assert axis == "Y" or axis == "X" or axis == "Z" or axis == "R"
         pos = int(pos / self.cr[axis])
@@ -123,9 +133,11 @@ class Motor(object):
         self.write('{0}P={1}'.format(axis, pos))  # tell the motor its current position is pos
         self.flush()
         sleep(30 / 1000)
+        self.serial_lock.release()
         return pos
 
     def go_to_pos(self, axis, pos):
+        self.serial_lock.acquire()
         self.ser.flush()
         assert axis == "Y" or axis == "X" or axis == "Z" or axis == "R"
         pos = int(pos / self.cr[axis])
@@ -137,10 +149,13 @@ class Motor(object):
         except serial.SerialTimeoutException:
             print("write timeout exception. {0}MA {1},0,0".format(axis,pos))
         self.flush()
+        self.serial_lock.release()
 
     def go_step(self, axis, way):
         self.go_to_pos(axis, self.pos[axis] + way * self.step[axis])
 
     def stop(self):
+        self.serial_lock.acquire()
         self.write(chr(27))
         self.flush()
+        self.serial_lock.release()
