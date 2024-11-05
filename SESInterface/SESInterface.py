@@ -21,7 +21,7 @@ class SES_API(QObject):
 
     ConnectionStatusChanged = Signal(object)
     Stop = Signal()
-    moveTo = Signal(float)
+    moveTo = Signal(float,str)
     
     def __init__(self):
         super(SES_API,self).__init__()
@@ -41,10 +41,10 @@ class SES_API(QObject):
     def move(self,data):
         self.status = self.ManipulatorStatus.MOVING
         m = self.move_reg.findall(data)
-        print(m)
+        print(m,"at move")
         if m:
             axis, pos  = m[0][0] , m[0][1]
-            self.moveTo.emit(float(pos))
+            self.moveTo.emit(float(pos), str(axis))
             print(axis,pos)
         else:
             print("no axis found.")
@@ -65,7 +65,7 @@ class SES_API(QObject):
          self.conn.send("{}\n".format(self.pos[axis]).encode())
 
     def stop(self):
-        print('stoping')
+        print('stopping')
         self.Stop.emit()
 
     def send_status(self):
@@ -128,14 +128,16 @@ class SES_API(QObject):
 
                             sleep(0.01)
                             continue
-
+                        print(data)
                         for data in data.decode("UTF-8").split('\n'):
 
                             if("?" in data):
                                 self.handle_req(data) #Handle data request
                             elif "MOV" in data: #MOVX5.0 for example
+                                print("at handle connection loop")
                                 self.move(data) #handle move request
                             elif "STOP" in data:
+                                #print("read stop in data")
                                 self.stop()
                             else:
                                 if data!=r"\n":
