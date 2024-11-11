@@ -450,6 +450,7 @@ class MainWindow(QtWidgets.QMainWindow):
                  self.go_to_pos(axis, pos)
                  return True
             else:
+                print("got the lock")
                 #check if there is a polar data in current location,
                 if pos in self.polar_vec:
                     idx = self.polar_vec.index(pos)
@@ -471,7 +472,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     _y = np.interp(pos, p_array[idx_sorted], y_array[idx_sorted], left=None, right=None, period=None)
                     _P = pos
 
-                print("moving")
+                print("moving with polar lock")
                 print(_x,_y,_P)
                 self.go_to_pos("X", _x)
                 self.go_to_pos("Y", _y)
