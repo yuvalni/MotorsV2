@@ -41,11 +41,11 @@ class SES_API(QObject):
     def move(self,data):
         self.status = self.ManipulatorStatus.MOVING
         m = self.move_reg.findall(data)
-        print(m,"at move")
+        #print(m,"at move")
         if m:
             axis, pos  = m[0][0] , m[0][1]
             self.moveTo.emit(float(pos), str(axis))
-            print(axis,pos)
+            #print(axis,pos)
         else:
             print("no axis found.")
 
@@ -128,13 +128,13 @@ class SES_API(QObject):
 
                             sleep(0.01)
                             continue
-                        print(data)
+                        #print(data)
                         for data in data.decode("UTF-8").split('\n'):
 
                             if("?" in data):
                                 self.handle_req(data) #Handle data request
                             elif "MOV" in data: #MOVX5.0 for example
-                                print("at handle connection loop")
+                                #print("at handle connection loop")
                                 self.move(data) #handle move request
                             elif "STOP" in data:
                                 #print("read stop in data")

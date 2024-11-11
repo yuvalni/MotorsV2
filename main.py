@@ -435,13 +435,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def SESmove(self,axis,pos):
         #print("in SESmove")
-        print(axis,pos)
+        #print(axis,pos)
         #assert axis == "R"
         pos = float(pos)
-        if axis != "R":
-            print("in not R")
-            self.go_to_pos(axis, pos)
-            return True       
+        if not self.PolarLock:
+            if axis != "R":
+                print("in not R")
+                self.go_to_pos(axis, pos)
+                return True       
         #this will be called by the SES API to move an axis- probably the polar
         #print(self.PolarLock)
         #print(self.polar_vec)
@@ -472,7 +473,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     _y = np.interp(pos, p_array[idx_sorted], y_array[idx_sorted], left=None, right=None, period=None)
                     _P = pos
 
-                print("moving with polar lock")
+                #print("moving with polar lock")
                 print(_x,_y,_P)
                 self.go_to_pos("X", _x)
                 self.go_to_pos("Y", _y)
