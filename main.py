@@ -289,7 +289,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def go_to_pos(self,ax,pos):
         
         #print(ax,pos)
-        logger.info('{} sent to: {}. position: {}.'.format(ax, pos, positions[ax]))
+        #logger.info('{} sent to: {}. position: {}.'.format(ax, pos, positions[ax]))
         if self.safeMode:
             if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
                 logger.info('{} Out of range: {} of {} '.format(ax, pos, self.allowd_range[ax]))
@@ -383,8 +383,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.moving = False
                 self.manipulatorStopdMoving_LED.setChecked(True)
                 if self.Tracking_window is not None:
-                    if self.Tracking_window.isVisible():
-                        self.Tracking_window.update_position_graph(self.positions["R"],self.positions["X"],self.positions["Y"])
+                    #if self.Tracking_window.isVisible():
+                    self.Tracking_window.update_position_graph(self.positions["R"],self.positions["X"],self.positions["Y"])
                 return True
 
             sleep(0.05)
