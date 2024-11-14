@@ -9,6 +9,7 @@ pg.setConfigOption('foreground', 'k')
 
 class TrackingWindow(QtWidgets.QWidget):
     VecsUpdated = QtCore.Signal(list,list,list)
+
     def __init__(self,P_vec=[],X_vec=[],Y_vec=[], *args, **kwargs):
         super(TrackingWindow, self).__init__(*args, **kwargs)
         self.pos = ()
