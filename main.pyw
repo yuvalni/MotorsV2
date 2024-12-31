@@ -16,6 +16,8 @@ from time import time
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
+from pymeasure.display.widgets.log_widget import LogWidget
+import ctypes
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -42,6 +44,16 @@ PosLog.setLevel(logging.DEBUG)
 PosLog.setFormatter(formatter)
 Poslogger.addHandler(PosLog)
 
+class LogRedirector:
+    def __init__(self, logger):
+        self.logger = logger
+
+    def write(self, message):
+        if message.strip():  # Ignore empty messages
+            self.logger.info(message.strip())
+
+    def flush(self):  # Required for compatibility
+        pass
 
 def create_Hseperator():
     seperator = QtWidgets.QFrame()
@@ -229,14 +241,25 @@ class MainWindow(QtWidgets.QMainWindow):
         return Axis_Grid_layout
 
     def createLayout(self):
+
+        main_layout =  QtWidgets.QVBoxLayout()
+        self.tabs = QtWidgets.QTabWidget()
+        main_layout.addWidget(self.tabs)
+
+        control = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout()
+        control.setLayout(layout)
+        self.tabs.addTab(control,"Control")
         Axis_Grid_layout = self.CreateAxisLayout()
 
         layout.addLayout(Axis_Grid_layout)
         layout.addWidget(create_Vseperator())
         buttonPanel = self.CreateButtonPanel()
         layout.addLayout(buttonPanel)
-        return layout
+
+        self.log_widget = LogWidget("Experiment Log")
+        self.tabs.addTab(self.log_widget, "log")
+        return main_layout
 
 
     def __init__(self,*args, **kwargs):
@@ -271,6 +294,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.step_sizes = {**self.motors.step}
         self.safeMode = True
 
+        log = logging.getLogger(__name__)
+        log.addHandler(logging.NullHandler())
+        logging.getLogger().addHandler(self.log_widget.handler)  # needs to be in Qt context?
+        log.setLevel(logging.INFO)
+        log.info("ManagedWindow connected to logging")
+        sys.stdout = LogRedirector(log)
+
     @QtCore.Slot(float)
     def set_step(self, ax, step):
         self.step_sizes[ax] = step
@@ -293,7 +323,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #logger.info('{} sent to: {}. position: {}.'.format(ax, pos, positions[ax]))
         if self.safeMode:
             if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
-                logger.info('{} Out of range: {} of {} '.format(ax, pos, self.allowd_range[ax]))
+                logger.warning('{} Out of range: {} of {} '.format(ax, pos, self.allowd_range[ax]))
                 return False
 
         self.moving = True
@@ -314,7 +344,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, direction, self.positions[ax]))
         if self.safeMode:
             if (self.positions[ax] + direction * self.step_sizes[ax]) < self.allowd_range[ax][0] or (self.positions[ax] + direction * self.step_sizes[ax]) > self.allowd_range[ax][1]:
-                logger.info('{} Out of range:{} of {} '.format(ax, self.positions[ax] + direction * self.step_sizes[ax], self.allowd_range[ax]))
+                logger.warning('{} Out of range:{} of {} '.format(ax, self.positions[ax] + direction * self.step_sizes[ax], self.allowd_range[ax]))
                 return False
         if ax in self.motors.axes:
             self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
@@ -394,7 +424,7 @@ class MainWindow(QtWidgets.QMainWindow):
         print(ax,pos)
 
         realPos = self.motors.set_pos(ax, float(pos))
-        logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(realPos)))
+        logger.info('<!--WARNING--> Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(realPos)))
 
     def changeLimits(self,ax,low,high):
         logger.info('Set limit of {0} from ({1},{2})to: ({3},{4})'.format(ax,self.allowd_range[ax][0],self.allowd_range[ax][1], low,high))
@@ -489,8 +519,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
+    #app.setWindowIcon(QtGui.QIcon(r"\favicon.ico"))
     window = MainWindow()
-
+    window.setWindowTitle("Motors")
+    window.setWindowFlags(Qt.Window)
+    if sys.platform == "win32":
+        app_id = "ARPES.motors"  # Replace with your unique App ID
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    #window.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
     window.show()
     window.startUpdateLoop()
     SESapi = SES_API()
