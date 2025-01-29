@@ -154,6 +154,8 @@ class Motor(object):
     def go_step(self, axis, way):
         self.go_to_pos(axis, self.pos[axis] + way * self.step[axis])
 
+    def go_steps(self, axis, way,num):
+        self.go_to_pos(axis, self.pos[axis] + way * self.step[axis]*num)
     def stop(self):
         self.serial_lock.acquire()
         self.write(chr(27))
