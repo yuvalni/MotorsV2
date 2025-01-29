@@ -1,10 +1,23 @@
 from PySide6 import QtCore, QtGui, QtWidgets
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt,Signal
 import sys
+
+
+class DoubleClickButton(QtWidgets.QPushButton):
+    doubleClicked = Signal()
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.LeftButton:  # Check for left button double-click
+            self.doubleClicked.emit()
+        super().mouseDoubleClickEvent(event)
+
 
 
 class AxisWidget(QtWidgets.QWidget):
     MoveButtonClicked = QtCore.Signal(str,float)
+    DblMoveButtonClicked = QtCore.Signal(str,float)
     GoToPosClicked = QtCore.Signal(str,float)
     SetStep = QtCore.Signal(str,float)
 
@@ -15,10 +28,11 @@ class AxisWidget(QtWidgets.QWidget):
         
         layout = QtWidgets.QHBoxLayout()
 
-        posBtn = QtWidgets.QPushButton(pos_btn_txt)
+        posBtn = DoubleClickButton(pos_btn_txt)
         posBtn.setStyleSheet('font: 40px;')
         posBtn.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum)
         posBtn.clicked.connect(lambda: self.buttonPress("positive"))
+        posBtn.doubleClicked.connect(lambda: self.dblbuttonPress("positive"))
         layout.addWidget(posBtn)
 
         axisName = QtWidgets.QLabel("{}: ".format(name))
@@ -29,11 +43,12 @@ class AxisWidget(QtWidgets.QWidget):
         self.pos.setStyleSheet('font: 40px;')
         layout.addWidget(self.pos)
 
-        negBtn = QtWidgets.QPushButton(neg_btn_txt)
+        negBtn = DoubleClickButton(neg_btn_txt)
         negBtn.setStyleSheet('font: 40px;')
         negBtn.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum)
 
         negBtn.clicked.connect(lambda: self.buttonPress("negative"))
+        negBtn.doubleClicked.connect(lambda: self.dblbuttonPress("negative"))
 
         layout.addWidget(negBtn)
 
@@ -69,6 +84,12 @@ class AxisWidget(QtWidgets.QWidget):
             self.MoveButtonClicked.emit(self.name,1)
         else:
             self.MoveButtonClicked.emit(self.name,-1)
+
+    def dblbuttonPress(self,direction):
+        if direction == 'positive':
+            self.DblMoveButtonClicked.emit(self.name,1)
+        else:
+            self.DblMoveButtonClicked.emit(self.name,-1)
 
     def GoToPosClicked_func(self):
         self.GoToPosClicked.emit(self.name,self.GoToPos.value())
