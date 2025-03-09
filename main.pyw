@@ -211,14 +211,14 @@ class MainWindow(QtWidgets.QMainWindow):
         Axis_Grid_layout = QtWidgets.QGridLayout()
         Xaxis = AxisWidget("X",-20,20,pos_btn_txt=u"⇦",neg_btn_txt=u"⇨")
         Xaxis.MoveButtonClicked.connect(self.moveStep)
-        Xaxis.DblMoveButtonClicked.connect(self.DblmoveStep)
+        #Xaxis.DblMoveButtonClicked.connect(self.DblmoveStep)
         Xaxis.GoToPosClicked.connect(self.go_to_pos)
         Xaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(Xaxis)
         self.axis["X"] = Xaxis
         Yaxis = AxisWidget("Y",-10,10,pos_btn_txt=u"⊙",neg_btn_txt=u"⊗")
         Yaxis.MoveButtonClicked.connect(self.moveStep)
-        Yaxis.DblMoveButtonClicked.connect(self.DblmoveStep)
+        #Yaxis.DblMoveButtonClicked.connect(self.DblmoveStep)
         Yaxis.GoToPosClicked.connect(self.go_to_pos)
         Yaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(create_Hseperator())
@@ -226,7 +226,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.axis["Y"] = Yaxis
         Zaxis = AxisWidget("Z",-135,0,pos_btn_txt=u"⇑",neg_btn_txt=u"⇓")
         Zaxis.MoveButtonClicked.connect(self.moveStep)
-        Zaxis.DblMoveButtonClicked.connect(self.DblmoveStep)
+        #Zaxis.DblMoveButtonClicked.connect(self.DblmoveStep)
         Zaxis.GoToPosClicked.connect(self.go_to_pos)
         Zaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(create_Hseperator())
@@ -354,6 +354,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.motors.go_step(ax, direction)
             self.serial_in_use.release()
     def DblmoveStep(self,ax,direction):
+        return True
         factor = 5
         #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, direction, self.positions[ax]))
         if self.safeMode:
