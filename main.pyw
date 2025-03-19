@@ -346,6 +346,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def moveStep(self,ax,direction):
+        timeout_detector.reset()
+            
         #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, direction, self.positions[ax]))
         if self.safeMode:
             if (self.positions[ax] + direction * self.step_sizes[ax]) < self.allowd_range[ax][0] or (self.positions[ax] + direction * self.step_sizes[ax]) > self.allowd_range[ax][1]:
@@ -487,11 +489,6 @@ class MainWindow(QtWidgets.QMainWindow):
         #print(axis,pos)
         #assert axis == "R"
         timeout_detector.update()
-        if timeout_detector.is_stuck():
-            timeout_detector.reset()
-            if self.sendToSignal:
-                requests.get("https://api.callmebot.com/whatsapp.php?phone={0}&text={1}: {2} &apikey={3}".format(972526031129,"Polar scan might be stuck.","",1711572))
-            print("Warning: The sequence might be stuck!")
 
         pos = float(pos)
         if not self.PolarLock:
