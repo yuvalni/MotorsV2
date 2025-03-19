@@ -43,17 +43,19 @@ class AdaptiveTimeout:
         # Cancel any existing timer
         if self.timeout_timer:
             self.timeout_timer.cancel()
-
+        if len(self.intervals) < 3:  #I don't want to start the timer before buffering a bit
+            return True
         # Predict how long we should wait before declaring it stuck
         threshold = self.predict_threshold()
         print(f"[INFO] Restarting timer. Next timeout in {threshold:.2f} seconds.")
 
         self.timeout_timer = threading.Timer(threshold, self.handle_timeout)
+        if self.
         self.timeout_timer.start()
 
     def predict_threshold(self):
         """Predict a reasonable maximum wait time."""
-        if len(self.intervals) < 2:
+        if len(self.intervals) < 3:
             return self.default_timeout  # Not enough data yet
 
         avg = statistics.mean(self.intervals)
