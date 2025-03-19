@@ -1,61 +1,93 @@
 import time
+import threading
 import statistics
+import requests
 
 class AdaptiveTimeout:
-    def __init__(self, window_size=-1, threshold_factor=3):
+    def __init__(self, window_size=-1, threshold_factor=3, alert_callback=None, min_timeout=1.0, default_timeout=60*10*2):
         self.intervals = []
         self.window_size = window_size
         self.threshold_factor = threshold_factor
-        self.last_time = time.time()
+        
+        self.last_time = None
+        self.timeout_timer = None
+        
+        self.alert_callback = alert_callback or self.default_alert
+        
+        self.min_timeout = min_timeout  # Minimum timeout (avoiding zero)
+        self.default_timeout = default_timeout  # Timeout when there's no data
 
     def update(self):
-        """Updates the interval list and checks if it's stuck."""
+        """Call this when your system successfully makes progress (e.g., finishes a step)."""
         current_time = time.time()
-        interval = current_time - self.last_time
-
-        # Check if the interval is significantly longer than expected
-        if self.intervals:
-            avg = statistics.mean(self.intervals)
-            if interval > self.reset_factor * avg:
-                print("Resetting adaptive timeout due to long idle period.")
-                self.intervals.clear()  # Reset the interval history
-
-                
-        self.last_time = current_time
-
-        # Maintain a rolling window of last N intervals
-        self.intervals.append(interval)
-        if self.window_size > 0:
-            if len(self.intervals) > self.window_size:
+        
+        if self.last_time is not None:
+            # Calculate interval since last successful step
+            interval = current_time - self.last_time
+            self.intervals.append(interval)
+            
+            # Maintain rolling window
+            if self.window_size > 0 and len(self.intervals) > self.window_size:
                 self.intervals.pop(0)
 
-    def is_stuck(self):
-        """Checks if the latest waiting time is abnormal."""
+            print(f"[INFO] Step completed in {interval:.2f} seconds.")
+        
+        # Mark this time as the last successful update
+        self.last_time = current_time
+
+        # Restart the timeout timer
+        self.restart_timer()
+
+    def restart_timer(self):
+        """Cancel and restart the timeout timer based on predicted thresholds."""
+        # Cancel any existing timer
+        if self.timeout_timer:
+            self.timeout_timer.cancel()
+
+        # Predict how long we should wait before declaring it stuck
+        threshold = self.predict_threshold()
+        print(f"[INFO] Restarting timer. Next timeout in {threshold:.2f} seconds.")
+
+        self.timeout_timer = threading.Timer(threshold, self.handle_timeout)
+        self.timeout_timer.start()
+
+    def predict_threshold(self):
+        """Predict a reasonable maximum wait time."""
         if len(self.intervals) < 2:
-            return False  # Not enough data to determine
+            return self.default_timeout  # Not enough data yet
 
         avg = statistics.mean(self.intervals)
-        std_dev = statistics.stdev(self.intervals) if len(self.intervals) > 1 else 0
+        std_dev = statistics.stdev(self.intervals)
 
-        # Predict a reasonable maximum wait time
         threshold = avg + self.threshold_factor * std_dev
-        current_wait = time.time() - self.last_time
+        return max(threshold, self.min_timeout)
 
-        return current_wait > threshold
-    def reset(self):
-        """Manually reset the timeout detection."""
+    def handle_timeout(self):
+        """Called when timeout expires without an update."""
+        print("[ALERT] No update received in predicted time! System might be stuck.")
+        if self.alert_callback:
+            self.alert_callback()
         self.intervals.clear()
-        self.last_time = time.time()
+        self.last_time = None
 
-# Example Usage:
-timeout_detector = AdaptiveTimeout()
+    def default_alert(self):
+        """Default alert action (send a message)."""
+        print("[DEFAULT ALERT] Sending stuck notification...")
+        try:
+            requests.get(
+                "https://api.callmebot.com/whatsapp.php?phone={0}&text={1}: {2} &apikey={3}".format(
+                    972526031129, "Polar scan might be stuck.", "", 1711572
+                )
+            )
+        except Exception as e:
+            print(f"[ERROR] Failed to send alert: {e}")
 
-# Simulating the process receiving instructions at different time intervals
-for delay in [1.2, 1.5, 1.7, 1.3, 2.0, 1.8, 2.2, 3.0]:  # Example intervals
-    time.sleep(delay)  # Simulate variable delays
-    timeout_detector.update()
-    
-    if timeout_detector.is_stuck():
-        timeout_detector.reset()
-        print("Warning: The sequence might be stuck!")
-
+    def reset(self):
+        """Manual reset (clears intervals and cancels timers)."""
+        print("[INFO] Manual reset triggered.")
+        self.intervals.clear()
+        self.last_time = None
+        
+        if self.timeout_timer:
+            self.timeout_timer.cancel()
+            self.timeout_timer = None
