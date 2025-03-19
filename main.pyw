@@ -9,6 +9,8 @@ from TrackingWindow.TrackingWindow import TrackingWindow
 from MotorsClass.mdrive import Motor
 from time import sleep, time
 
+from AdaptiveTimeout import AdaptiveTimeout
+import requests
 import threading
 from SESInterface.SESInterface import SES_API
 import numpy as np
@@ -409,6 +411,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if time() - loop_start_time > 30:   #if we wait more then ... seconds (!) just assume we have arrived.
                 #send notification to signal!
+                if self.sendToSignal:
+                    requests.get("https://api.callmebot.com/whatsapp.php?phone={0}&text={1}: {2} &apikey={3}".format(972526031129,"polar move timout!","",1711572))
                 flag = True
 
             if flag:
@@ -482,6 +486,13 @@ class MainWindow(QtWidgets.QMainWindow):
         #print("in SESmove")
         #print(axis,pos)
         #assert axis == "R"
+        timeout_detector.update()
+        if timeout_detector.is_stuck():
+            timeout_detector.reset()
+            if self.sendToSignal:
+                requests.get("https://api.callmebot.com/whatsapp.php?phone={0}&text={1}: {2} &apikey={3}".format(972526031129,"Polar scan might be stuck.","",1711572))
+            print("Warning: The sequence might be stuck!")
+
         pos = float(pos)
         if not self.PolarLock:
             if axis != "R":
@@ -551,6 +562,7 @@ if __name__=="__main__":
     window.threadpool.start(SESapi.handle_connection)
 
     app.aboutToQuit.connect(lambda: window.closeWindowCallback(SESapi))
+    timeout_detector = AdaptiveTimeout()
 
 
 

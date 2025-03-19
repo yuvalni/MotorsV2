@@ -35,7 +35,7 @@ class SettingsWindow(QtWidgets.QWidget):
         layout.addWidget(pSettings,1,1)
 
         self.sendToSignalCB = QtWidgets.QCheckBox()
-        self.sendToSignalCB.setChecked(False)
+        self.sendToSignalCB.setChecked(True)
         self.sendToSignalCB.stateChanged.connect(lambda: self.sendToSignalSet.emit(self.sendToSignalCB.isChecked()))
         layout.addWidget(self.sendToSignalCB)
         layout.addWidget(QtWidgets.QLabel("send to signal"))
