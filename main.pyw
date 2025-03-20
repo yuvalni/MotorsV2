@@ -489,7 +489,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #print(axis,pos)
         #assert axis == "R"
         timeout_detector.update()
-
+        print(pos)
         pos = float(pos)
         if not self.PolarLock:
             if axis != "R":
@@ -504,7 +504,7 @@ class MainWindow(QtWidgets.QMainWindow):
                  self.go_to_pos(axis, pos)
                  return True
             else:
-                print("got the lock")
+                #print("got the lock")
                 #check if there is a polar data in current location,
                 if pos in self.polar_vec:
                     idx = self.polar_vec.index(pos)
@@ -541,7 +541,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def stuck_alert(self):
         print("[ALERT] Sending stuck notification...")
-        print("{1}: X={2},Y={3},P={4}".format("Polar scan might be stuck.", str(self.positions["X"]),str(self.positions["Y"]),str(self.positions["R"])))
+        print("{0}: X={1},Y={2},P={3}".format("Polar scan might be stuck.", str(self.positions["X"]),str(self.positions["Y"]),str(self.positions["R"])))
         try:
             requests.get(
                 "https://api.callmebot.com/whatsapp.php?phone={0}&text={1}: X={2},Y={3},P={4} &apikey={5}".format(
