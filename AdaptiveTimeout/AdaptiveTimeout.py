@@ -76,14 +76,7 @@ class AdaptiveTimeout:
     def default_alert(self):
         """Default alert action (send a message)."""
         print("[DEFAULT ALERT] Sending stuck notification...")
-        try:
-            requests.get(
-                "https://api.callmebot.com/whatsapp.php?phone={0}&text={1}: {2} &apikey={3}".format(
-                    972526031129, "Polar scan might be stuck.", "", 1711572
-                )
-            )
-        except Exception as e:
-            print(f"[ERROR] Failed to send alert: {e}")
+
 
     def reset(self):
         """Manual reset (clears intervals and cancels timers)."""
