@@ -51,7 +51,6 @@ class AdaptiveTimeout:
         print(f"[INFO] Restarting timer. Next timeout in {threshold:.2f} seconds.")
 
         self.timeout_timer = threading.Timer(threshold, self.handle_timeout)
-        if self.
         self.timeout_timer.start()
 
     def predict_threshold(self):

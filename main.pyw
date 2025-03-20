@@ -9,7 +9,7 @@ from TrackingWindow.TrackingWindow import TrackingWindow
 from MotorsClass.mdrive import Motor
 from time import sleep, time
 
-from AdaptiveTimeout import AdaptiveTimeout
+from AdaptiveTimeout.AdaptiveTimeout import AdaptiveTimeout
 import requests
 import threading
 from SESInterface.SESInterface import SES_API
