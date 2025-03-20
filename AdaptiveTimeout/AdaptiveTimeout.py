@@ -24,6 +24,8 @@ class AdaptiveTimeout:
         if self.last_time is not None:
             # Calculate interval since last successful step
             interval = current_time - self.last_time
+            if interval < 2:
+                return True
             self.intervals.append(interval)
             
             # Maintain rolling window

@@ -488,7 +488,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #print("in SESmove")
         #print(axis,pos)
         #assert axis == "R"
-        timeout_detector.update()
+        
         print(pos)
         pos = float(pos)
         if not self.PolarLock:
@@ -500,6 +500,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #print(self.PolarLock)
         #print(self.polar_vec)
         if axis == "R":
+            timeout_detector.update()
             if not self.PolarLock:
                  self.go_to_pos(axis, pos)
                  return True
