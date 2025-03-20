@@ -539,6 +539,18 @@ class MainWindow(QtWidgets.QMainWindow):
         if event.key() == Qt.Key.Key_Escape:
             self.stop()
 
+    def stuck_alert(self):
+        print("[ALERT] Sending stuck notification...")
+        print("{1}: X={2},Y={3},P={4}".format("Polar scan might be stuck.", str(self.positions["X"]),str(self.positions["Y"]),str(self.positions["R"])))
+        try:
+            requests.get(
+                "https://api.callmebot.com/whatsapp.php?phone={0}&text={1}: X={2},Y={3},P={4} &apikey={5}".format(
+                    972526031129, "Polar scan might be stuck.", str(self.positions["X"]),str(self.positions["Y"]),str(self.positions["R"]), 1711572
+                )
+            )
+        except Exception as e:
+            print(f"[ERROR] Failed to send alert: {e}")
+        
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
@@ -559,7 +571,7 @@ if __name__=="__main__":
     window.threadpool.start(SESapi.handle_connection)
 
     app.aboutToQuit.connect(lambda: window.closeWindowCallback(SESapi))
-    timeout_detector = AdaptiveTimeout()
+    timeout_detector = AdaptiveTimeout(alert_callback = window.stuck_alert)
 
 
 

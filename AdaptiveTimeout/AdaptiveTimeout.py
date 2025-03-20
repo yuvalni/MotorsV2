@@ -29,6 +29,7 @@ class AdaptiveTimeout:
             # Maintain rolling window
             if self.window_size > 0 and len(self.intervals) > self.window_size:
                 self.intervals.pop(0)
+            
 
             print(f"[INFO] Step completed in {interval:.2f} seconds.")
         
