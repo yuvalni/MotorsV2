@@ -375,7 +375,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.motors.stop()
         self.stoped.set()
         self.serial_in_use.release()
-
+    
+    def SES_stop(self):
+        logger.info("SES sent stop command.")
+        # I think this is where we want to verify if Polar is at the right location?
+        self.stop() #calling stop function
 
     def updateLoop(self):
         self.serial_up.acquire(blocking=False) #Do not close serial!
@@ -414,7 +418,12 @@ class MainWindow(QtWidgets.QMainWindow):
             if time() - loop_start_time > 30:   #if we wait more then ... seconds (!) just assume we have arrived.
                 #send notification to signal!
                 if self.sendToSignal:
-                    requests.get("https://api.callmebot.com/whatsapp.php?phone={0}&text={1}: {2} &apikey={3}".format(972526031129,"polar move timout!","",1711572))
+                    requests.get(
+                    "https://api.callmebot.com/whatsapp.php?phone={0}&text={1}&apikey={2}".format(
+                    972526031129, "warning: movement timeout.", 1711572
+                    )
+                    )
+                print("[Warning] movement timeout.")    
                 flag = True
 
             if flag:
@@ -430,6 +439,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 #if stoped is pressed. movement is done!
                 #so set the set_pos to be the current one,
                 #end we have finished movement!
+                print("[Info] movement stopped to to Stop command.")
                 for ax in self.set_positions.keys():
                     self.set_positions[ax] = self.positions[ax]
                 self.moving = False
@@ -489,18 +499,18 @@ class MainWindow(QtWidgets.QMainWindow):
         #print(axis,pos)
         #assert axis == "R"
         
-        print(pos)
+        print("SES: move {0} to:{1}".formta(axis,pos))
         pos = float(pos)
         if not self.PolarLock:
             if axis != "R":
-                print("in not R")
+                print("Not in lock mode.")
                 self.go_to_pos(axis, pos)
                 return True       
         #this will be called by the SES API to move an axis- probably the polar
         #print(self.PolarLock)
         #print(self.polar_vec)
         if axis == "R":
-            timeout_detector.update()
+            timeout_detector.update() #let's monitor if we are stuck
             if not self.PolarLock:
                  self.go_to_pos(axis, pos)
                  return True
@@ -515,7 +525,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 else:
                     if((pos>max(self.polar_vec))or(pos<min(self.polar_vec))):
-                        print("polar out of range.")
+                        print("[Warning] polar out of range.")
                         return False
                     #if not, interpolat between nearest points.
                     p_array = np.array(self.polar_vec)
@@ -529,9 +539,38 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 #print("moving with polar lock")
                 print(_x,_y,_P)
-                self.go_to_pos("X", _x)
-                self.go_to_pos("Y", _y)
-                self.go_to_pos("R",_P)
+                print("moving with polar lock x:{0},y:{1},P:{2}".format(_x,_y,_P))
+                #self.go_to_pos("X", _x)
+                #self.go_to_pos("Y", _y)
+                #self.go_to_pos("R",_P)
+                self.go_to_multiple_positions({"X": _x, "Y": _y, "R": _P})
+
+
+    def got_to_multiple_positions(self,positions_dict):
+        if self.safeMode:
+            for ax, pos in positions_dict.items():
+                if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
+                    logger.warning('{} Out of range: {} of {} '.format(ax, pos, self.allowd_range[ax]))
+                    return False
+
+        self.moving = True
+        for ax, pos in positions_dict.items():
+            self.set_positions[ax] = float(pos)
+        
+        self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
+        for ax, pos in positions_dict.items():
+            if ax in self.motors.axes:
+                self.motors.go_to_pos(ax, float(pos))
+        self.serial_in_use.release()
+
+        self.stoped.clear() #initiated a new movement
+        
+        self.manipulatorStopdMoving_LED.setChecked(False)
+        self.threadpool.start(self.check_movement)
+
+
+
+
 
     def keyPressEvent(self,event):
         if event.key() == Qt.Key.Key_Enter or event.key() == Qt.Key.Key_Return:
@@ -541,8 +580,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.stop()
 
     def stuck_alert(self):
-        print("[ALERT] Sending stuck notification...")
-        print("{0}: X={1},Y={2},P={3}".format("Polar scan might be stuck.", str(self.positions["X"]),str(self.positions["Y"]),str(self.positions["R"])))
+        #print("[ALERT] Sending stuck notification...")
+        print("[ALERT] {0}: X={1},Y={2},P={3}".format("Polar scan might be stuck.", str(self.positions["X"]),str(self.positions["Y"]),str(self.positions["R"])))
         try:
             requests.get(
                 "https://api.callmebot.com/whatsapp.php?phone={0}&text={1}: X={2},Y={3},P={4} &apikey={5}".format(
