@@ -4,7 +4,7 @@ import statistics
 import requests
 
 class AdaptiveTimeout:
-    def __init__(self, window_size=-1, threshold_factor=3, alert_callback=None, min_timeout=1.0, default_timeout=60*10*2):
+    def __init__(self, window_size=-1, threshold_factor=6, alert_callback=None, min_timeout=1.0, default_timeout=60*10*2):
         self.intervals = []
         self.window_size = window_size
         self.threshold_factor = threshold_factor
