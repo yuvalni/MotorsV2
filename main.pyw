@@ -538,7 +538,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     _P = pos
 
                 #print("moving with polar lock")
-                print(_x,_y,_P)
+                #print(_x,_y,_P)
                 print("moving with polar lock x:{0},y:{1},P:{2}".format(_x,_y,_P))
                 #self.go_to_pos("X", _x)
                 #self.go_to_pos("Y", _y)
