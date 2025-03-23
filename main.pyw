@@ -499,7 +499,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #print(axis,pos)
         #assert axis == "R"
         
-        print("SES: move {0} to:{1}".formta(axis,pos))
+        print("SES: move {0} to:{1}".format(axis,pos))
         pos = float(pos)
         if not self.PolarLock:
             if axis != "R":
@@ -546,7 +546,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.go_to_multiple_positions({"X": _x, "Y": _y, "R": _P})
 
 
-    def got_to_multiple_positions(self,positions_dict):
+    def go_to_multiple_positions(self,positions_dict):
         if self.safeMode:
             for ax, pos in positions_dict.items():
                 if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
