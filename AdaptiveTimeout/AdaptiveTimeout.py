@@ -81,7 +81,7 @@ class AdaptiveTimeout:
 
     def reset(self):
         """Manual reset (clears intervals and cancels timers)."""
-        print("[INFO] Manual reset triggered.")
+        #print("[INFO] Manual reset triggered.")
         self.intervals.clear()
         self.last_time = None
         
