@@ -9,6 +9,8 @@ from TrackingWindow.TrackingWindow import TrackingWindow
 from MotorsClass.mdrive import Motor
 from time import sleep, time
 
+from AdaptiveTimeout.AdaptiveTimeout import AdaptiveTimeout
+import requests
 import threading
 from SESInterface.SESInterface import SES_API
 import numpy as np
@@ -16,6 +18,8 @@ from time import time
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
+from pymeasure.display.widgets.log_widget import LogWidget
+import ctypes
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -42,6 +46,16 @@ PosLog.setLevel(logging.DEBUG)
 PosLog.setFormatter(formatter)
 Poslogger.addHandler(PosLog)
 
+class LogRedirector:
+    def __init__(self, logger):
+        self.logger = logger
+
+    def write(self, message):
+        if message.strip():  # Ignore empty messages
+            self.logger.info(message.strip())
+
+    def flush(self):  # Required for compatibility
+        pass
 
 def create_Hseperator():
     seperator = QtWidgets.QFrame()
@@ -199,12 +213,14 @@ class MainWindow(QtWidgets.QMainWindow):
         Axis_Grid_layout = QtWidgets.QGridLayout()
         Xaxis = AxisWidget("X",-20,20,pos_btn_txt=u"⇦",neg_btn_txt=u"⇨")
         Xaxis.MoveButtonClicked.connect(self.moveStep)
+        #Xaxis.DblMoveButtonClicked.connect(self.DblmoveStep)
         Xaxis.GoToPosClicked.connect(self.go_to_pos)
         Xaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(Xaxis)
         self.axis["X"] = Xaxis
         Yaxis = AxisWidget("Y",-10,10,pos_btn_txt=u"⊙",neg_btn_txt=u"⊗")
         Yaxis.MoveButtonClicked.connect(self.moveStep)
+        #Yaxis.DblMoveButtonClicked.connect(self.DblmoveStep)
         Yaxis.GoToPosClicked.connect(self.go_to_pos)
         Yaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(create_Hseperator())
@@ -212,6 +228,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.axis["Y"] = Yaxis
         Zaxis = AxisWidget("Z",-135,0,pos_btn_txt=u"⇑",neg_btn_txt=u"⇓")
         Zaxis.MoveButtonClicked.connect(self.moveStep)
+        #Zaxis.DblMoveButtonClicked.connect(self.DblmoveStep)
         Zaxis.GoToPosClicked.connect(self.go_to_pos)
         Zaxis.SetStep.connect(self.set_step)
         Axis_Grid_layout.addWidget(create_Hseperator())
@@ -229,14 +246,25 @@ class MainWindow(QtWidgets.QMainWindow):
         return Axis_Grid_layout
 
     def createLayout(self):
+
+        main_layout =  QtWidgets.QVBoxLayout()
+        self.tabs = QtWidgets.QTabWidget()
+        main_layout.addWidget(self.tabs)
+
+        control = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout()
+        control.setLayout(layout)
+        self.tabs.addTab(control,"Control")
         Axis_Grid_layout = self.CreateAxisLayout()
 
         layout.addLayout(Axis_Grid_layout)
         layout.addWidget(create_Vseperator())
         buttonPanel = self.CreateButtonPanel()
         layout.addLayout(buttonPanel)
-        return layout
+
+        self.log_widget = LogWidget("Experiment Log")
+        self.tabs.addTab(self.log_widget, "log")
+        return main_layout
 
 
     def __init__(self,*args, **kwargs):
@@ -271,6 +299,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.step_sizes = {**self.motors.step}
         self.safeMode = True
 
+        log = logging.getLogger(__name__)
+        log.addHandler(logging.NullHandler())
+        logging.getLogger().addHandler(self.log_widget.handler)  # needs to be in Qt context?
+        log.setLevel(logging.INFO)
+        log.info("ManagedWindow connected to logging")
+        sys.stdout = LogRedirector(log)
+
     @QtCore.Slot(float)
     def set_step(self, ax, step):
         self.step_sizes[ax] = step
@@ -292,7 +327,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #logger.info('{} sent to: {}. position: {}.'.format(ax, pos, positions[ax]))
         if self.safeMode:
             if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
-                logger.info('{} Out of range: {} of {} '.format(ax, pos, self.allowd_range[ax]))
+                logger.warning('{} Out of range: {} of {} '.format(ax, pos, self.allowd_range[ax]))
                 return False
 
         self.moving = True
@@ -310,14 +345,28 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def moveStep(self,ax,direction):
+        timeout_detector.reset()
+            
         #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, direction, self.positions[ax]))
         if self.safeMode:
             if (self.positions[ax] + direction * self.step_sizes[ax]) < self.allowd_range[ax][0] or (self.positions[ax] + direction * self.step_sizes[ax]) > self.allowd_range[ax][1]:
-                logger.info('{} Out of range:{} of {} '.format(ax, self.positions[ax] + direction * self.step_sizes[ax], self.allowd_range[ax]))
+                logger.warning('{} Out of range:{} of {} '.format(ax, self.positions[ax] + direction * self.step_sizes[ax], self.allowd_range[ax]))
                 return False
         if ax in self.motors.axes:
             self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
             self.motors.go_step(ax, direction)
+            self.serial_in_use.release()
+    def DblmoveStep(self,ax,direction):
+        return True
+        factor = 5
+        #logger.info('{} moved one step. direction:{}. current position: {}.'.format(ax, direction, self.positions[ax]))
+        if self.safeMode:
+            if (self.positions[ax] + direction *factor* self.step_sizes[ax]) < self.allowd_range[ax][0] or (self.positions[ax] + direction * factor*self.step_sizes[ax]) > self.allowd_range[ax][1]:
+                logger.warning('{} Out of range:{} of {} '.format(ax, self.positions[ax] + direction * self.step_sizes[ax], self.allowd_range[ax]))
+                return False
+        if ax in self.motors.axes:
+            self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
+            self.motors.go_steps(ax, direction,factor)
             self.serial_in_use.release()
 
     def stop(self):
@@ -325,7 +374,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.motors.stop()
         self.stoped.set()
         self.serial_in_use.release()
-
+    
+    def SES_stop(self):
+        logger.info("SES sent stop command.")
+        # I think this is where we want to verify if Polar is at the right location?
+        self.stop() #calling stop function
 
     def updateLoop(self):
         self.serial_up.acquire(blocking=False) #Do not close serial!
@@ -363,6 +416,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if time() - loop_start_time > 30:   #if we wait more then ... seconds (!) just assume we have arrived.
                 #send notification to signal!
+                if self.sendToSignal:
+                    requests.get(
+                    "https://api.callmebot.com/whatsapp.php?phone={0}&text={1}&apikey={2}".format(
+                    972526031129, "warning: movement timeout.", 1711572
+                    )
+                    )
+                print("[Warning] movement timeout.")    
                 flag = True
 
             if flag:
@@ -378,6 +438,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 #if stoped is pressed. movement is done!
                 #so set the set_pos to be the current one,
                 #end we have finished movement!
+                print("[Info] movement stopped to to Stop command.")
                 for ax in self.set_positions.keys():
                     self.set_positions[ax] = self.positions[ax]
                 self.moving = False
@@ -393,7 +454,7 @@ class MainWindow(QtWidgets.QMainWindow):
         print(ax,pos)
 
         realPos = self.motors.set_pos(ax, float(pos))
-        logger.info('Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(realPos)))
+        logger.info('<!--WARNING--> Set Postion of {0} to: {1} (internal corr: {2})'.format(ax, pos, str(realPos)))
 
     def changeLimits(self,ax,low,high):
         logger.info('Set limit of {0} from ({1},{2})to: ({3},{4})'.format(ax,self.allowd_range[ax][0],self.allowd_range[ax][1], low,high))
@@ -433,43 +494,82 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def SESmove(self,axis,pos):
-        #print("in SES")
+        #print("in SESmove")
         #print(axis,pos)
-        assert axis == "R"
+        #assert axis == "R"
+        
+        print("SES: move {0} to:{1}".format(axis,pos))
         pos = float(pos)
+        if not self.PolarLock:
+            if axis != "R":
+                print("Not in lock mode.")
+                self.go_to_pos(axis, pos)
+                return True       
         #this will be called by the SES API to move an axis- probably the polar
         #print(self.PolarLock)
         #print(self.polar_vec)
-        if not self.PolarLock:
-            self.go_to_pos(axis, pos)
-            return True
-        else:
-            #check if there is a polar data in current location,
-            if pos in self.polar_vec:
-                idx = self.polar_vec.index(pos)
-                _x = self.x_vec[idx]
-                _y = self.y_vec[idx]
-                _P = self.polar_vec[idx]
-
+        if axis == "R":
+            timeout_detector.update() #let's monitor if we are stuck
+            if not self.PolarLock:
+                 self.go_to_pos(axis, pos)
+                 return True
             else:
-                if((pos>max(self.polar_vec))or(pos<min(self.polar_vec))):
-                    print("polar out of range.")
+                #print("got the lock")
+                #check if there is a polar data in current location,
+                if pos in self.polar_vec:
+                    idx = self.polar_vec.index(pos)
+                    _x = self.x_vec[idx]
+                    _y = self.y_vec[idx]
+                    _P = self.polar_vec[idx]
+
+                else:
+                    if((pos>max(self.polar_vec))or(pos<min(self.polar_vec))):
+                        print("[Warning] polar out of range.")
+                        return False
+                    #if not, interpolat between nearest points.
+                    p_array = np.array(self.polar_vec)
+                    x_array = np.array(self.x_vec)
+                    y_array = np.array(self.y_vec)
+                    idx_sorted = p_array.argsort()
+
+                    _x = np.interp(pos, p_array[idx_sorted], x_array[idx_sorted], left=None, right=None, period=None)
+                    _y = np.interp(pos, p_array[idx_sorted], y_array[idx_sorted], left=None, right=None, period=None)
+                    _P = pos
+
+                #print("moving with polar lock")
+                #print(_x,_y,_P)
+                print("moving with polar lock x:{0},y:{1},P:{2}".format(_x,_y,_P))
+                #self.go_to_pos("X", _x)
+                #self.go_to_pos("Y", _y)
+                #self.go_to_pos("R",_P)
+                self.go_to_multiple_positions({"X": _x, "Y": _y, "R": _P})
+
+
+    def go_to_multiple_positions(self,positions_dict):
+        if self.safeMode:
+            for ax, pos in positions_dict.items():
+                if float(pos) < self.allowd_range[ax][0] or float(pos) > self.allowd_range[ax][1]:
+                    logger.warning('{} Out of range: {} of {} '.format(ax, pos, self.allowd_range[ax]))
                     return False
-                #if not, interpolat between nearest points.
-                p_array = np.array(self.polar_vec)
-                x_array = np.array(self.x_vec)
-                y_array = np.array(self.y_vec)
-                idx_sorted = p_array.argsort()
 
-                _x = np.interp(pos, p_array[idx_sorted], x_array[idx_sorted], left=None, right=None, period=None)
-                _y = np.interp(pos, p_array[idx_sorted], y_array[idx_sorted], left=None, right=None, period=None)
-                _P = pos
+        self.moving = True
+        for ax, pos in positions_dict.items():
+            self.set_positions[ax] = float(pos)
+        
+        self.serial_in_use.acquire(blocking=True, timeout=- 1) #this will wait until reading position is done.
+        for ax, pos in positions_dict.items():
+            if ax in self.motors.axes:
+                self.motors.go_to_pos(ax, float(pos))
+        self.serial_in_use.release()
 
-            print("moving")
-            print(_x,_y,_P)
-            self.go_to_pos("X", _x)
-            self.go_to_pos("Y", _y)
-            self.go_to_pos("R",_P)
+        self.stoped.clear() #initiated a new movement
+        
+        self.manipulatorStopdMoving_LED.setChecked(False)
+        self.threadpool.start(self.check_movement)
+
+
+
+
 
     def keyPressEvent(self,event):
         if event.key() == Qt.Key.Key_Enter or event.key() == Qt.Key.Key_Return:
@@ -478,20 +578,39 @@ class MainWindow(QtWidgets.QMainWindow):
         if event.key() == Qt.Key.Key_Escape:
             self.stop()
 
+    def stuck_alert(self):
+        #print("[ALERT] Sending stuck notification...")
+        print("[ALERT] {0}: X={1},Y={2},P={3}".format("Polar scan might be stuck.", str(self.positions["X"]),str(self.positions["Y"]),str(self.positions["R"])))
+        try:
+            requests.get(
+                "https://api.callmebot.com/whatsapp.php?phone={0}&text={1}: X={2},Y={3},P={4} &apikey={5}".format(
+                    972526031129, "Polar scan might be stuck.", str(self.positions["X"]),str(self.positions["Y"]),str(self.positions["R"]), 1711572
+                )
+            )
+        except Exception as e:
+            print(f"[ERROR] Failed to send alert: {e}")
+        
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
+    #app.setWindowIcon(QtGui.QIcon(r"\favicon.ico"))
     window = MainWindow()
-
+    window.setWindowTitle("Motors")
+    window.setWindowFlags(Qt.Window)
+    if sys.platform == "win32":
+        app_id = "ARPES.motors"  # Replace with your unique App ID
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    #window.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
     window.show()
     window.startUpdateLoop()
     SESapi = SES_API()
     SESapi.ConnectionStatusChanged.connect(lambda state: window.ChangeConnectionLED(state))
     SESapi.Stop.connect(window.stop)
-    SESapi.moveTo.connect(lambda _pos: window.SESmove("R",_pos))
+    SESapi.moveTo.connect(lambda _pos,_axis: window.SESmove(_axis,_pos))
     window.threadpool.start(SESapi.handle_connection)
 
     app.aboutToQuit.connect(lambda: window.closeWindowCallback(SESapi))
+    timeout_detector = AdaptiveTimeout(alert_callback = window.stuck_alert)
 
 
 
